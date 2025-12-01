@@ -279,9 +279,11 @@ function adjustDay(offset) {
 
 const reportModal = document.getElementById('reportModal');
 const reportTableBody = document.getElementById('reportTableBody');
+const btnWa = document.querySelector('.btn-wa'); // Select WA button
 
 function openReportModal() {
   reportModal.style.display = 'flex';
+  btnWa.disabled = true; // Disable WA button initially
   renderReportTable();
 }
 
@@ -310,7 +312,10 @@ function renderReportTable() {
 
     tr.innerHTML = `
       <td>${row.Kelas}</td>
-      <td>${row['Nama Mapel']}</td>
+      <td>
+        ${row['Nama Mapel']}
+        <span class="teacher-name-small">${row['Nama Lengkap Guru']}</span>
+      </td>
       <td>
         <div class="status-options">
           <label class="status-label">
@@ -375,7 +380,8 @@ async function copyReportText() {
   const text = generateReportText();
   try {
     await navigator.clipboard.writeText(text);
-    alert('Laporan berhasil disalin ke clipboard!');
+    alert('Laporan berhasil disalin! Silakan klik tombol "Laporkan ke WhatsApp" dan tempel (Paste) pesan di kolom chat.');
+    btnWa.disabled = false; // Enable WA button
   } catch (err) {
     console.error('Gagal menyalin:', err);
     alert('Gagal menyalin teks. Mohon salin manual.');
