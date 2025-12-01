@@ -372,7 +372,7 @@ function generateReportText() {
   }
 
   report += `\nKeterangan:\n✅ : Hadir\n⚠️ : Belum Datang\n⛔ : Izin/Alfa\n`;
-  report += `\nLink Monitoring: https://monitoring-kbm.netlify.app/`;
+  report += `\nLink E-Jadwal: monitoring-kbm.netlify.app/`;
 
   return report;
 }
