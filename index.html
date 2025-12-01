@@ -408,6 +408,8 @@
 
     .modal-title {
       font-size: 1.2rem;
+      font-family: 'Rubik', sans-serif;
+      /* Match main header font */
       font-weight: bold;
       color: #FFD700;
     }
@@ -429,6 +431,8 @@
       width: 100%;
       border-collapse: collapse;
       margin-bottom: 20px;
+      border: 2px solid #888;
+      /* Thicker outer border */
     }
 
     .report-table th,
@@ -443,9 +447,23 @@
       font-weight: bold;
     }
 
+    /* Shrink first column (Kelas) to fit content */
+    .report-table th:first-child,
+    .report-table td:first-child {
+      width: 1%;
+      white-space: nowrap;
+      padding-right: 15px;
+      /* Add some spacing */
+    }
+
     .status-options {
       display: flex;
       gap: 10px;
+      margin-top: 5px;
+      flex-wrap: nowrap;
+      /* Prevent wrapping */
+      overflow-x: auto;
+      /* Allow scroll if screen is too small */
     }
 
     .status-label {
@@ -616,7 +634,7 @@
 
   <!-- Floating Action Button -->
   <button class="fab-report" onclick="openReportModal()">
-    📝 Laporkan KBM Saat Ini
+    📝 Laporkan KBM
   </button>
 
   <!-- Report Modal -->
@@ -632,8 +650,7 @@
           <thead>
             <tr>
               <th>Kelas</th>
-              <th>Mapel</th>
-              <th>Status</th>
+              <th>Mapel & Status</th>
             </tr>
           </thead>
           <tbody id="reportTableBody">

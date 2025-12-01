@@ -166,12 +166,14 @@ async function fetchData() {
     if (!periodeSekarang) {
       jamKBM.textContent = `Di luar jam KBM`;
       dataTabel.innerHTML = `<tr><td colspan="3">Tidak ada KBM saat ini</td></tr>`;
+      currentScheduleData = []; // Clear data
       return;
     }
 
     if (periodeSekarang['Jam Ke-'] === 'IST') {
       jamKBM.textContent = `Jam ISTIRAHAT`;
       dataTabel.innerHTML = `<tr><td colspan="3">Sedang istirahat</td></tr>`;
+      currentScheduleData = []; // Clear data
       return;
     }
 
@@ -189,6 +191,7 @@ async function fetchData() {
 
     if (jadwalSekarang.length === 0) {
       dataTabel.innerHTML = `<tr><td colspan="3">Tidak ada data jadwal untuk jam ini</td></tr>`;
+      currentScheduleData = []; // Clear data
       return;
     }
 
@@ -315,8 +318,6 @@ function renderReportTable() {
       <td>
         ${row['Nama Mapel']}
         <span class="teacher-name-small">${row['Nama Lengkap Guru']}</span>
-      </td>
-      <td>
         <div class="status-options">
           <label class="status-label">
             <input type="radio" name="status-${safeId}" value="✅" checked> ✅ Hadir
@@ -325,7 +326,7 @@ function renderReportTable() {
             <input type="radio" name="status-${safeId}" value="⚠️"> ⚠️ Telat
           </label>
           <label class="status-label">
-            <input type="radio" name="status-${safeId}" value="⛔"> ⛔ Izin/Alfa
+            <input type="radio" name="status-${safeId}" value="⛔"> ⛔ Tidak Hadir
           </label>
         </div>
       </td>
@@ -371,7 +372,7 @@ function generateReportText() {
     report += "Tidak ada jadwal aktif.\n";
   }
 
-  report += `\nKeterangan:\n✅ : Hadir\n⚠️ : Belum Datang\n⛔ : Izin/Alfa\n`;
+  report += `\nKeterangan:\n✅ : Hadir\n⚠️ : Belum Datang\n⛔ : Tidak Hadir\n`;
   report += `\nLink Monitoring: https://monitoring-kbm.netlify.app/`;
 
   return report;
