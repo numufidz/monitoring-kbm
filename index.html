@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
   <!-- Icon untuk shortcut (Android & iOS) -->
   <link rel="icon" href="/icon.png" type="image/png" />
@@ -10,7 +11,8 @@
 
   <!-- Open Graph / Facebook / WhatsApp -->
   <meta property="og:title" content="Jadwal Pelajaran Digital MTs. An-Nur Bululawang" />
-  <meta property="og:description" content="Monitoring jadwal pelajaran dan kegiatan belajar mengajar secara real-time." />
+  <meta property="og:description"
+    content="Monitoring jadwal pelajaran dan kegiatan belajar mengajar secara real-time." />
   <meta property="og:image" content="https://monitoring-kbm.netlify.app/banner.png" />
   <meta property="og:url" content="https://monitoring-kbm.netlify.app/" />
   <meta property="og:type" content="website" />
@@ -18,13 +20,16 @@
   <!-- Twitter Card (optional) -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Jadwal Pelajaran Digital MTs. An-Nur Bululawang" />
-  <meta name="twitter:description" content="Monitoring jadwal pelajaran dan kegiatan belajar mengajar secara real-time." />
+  <meta name="twitter:description"
+    content="Monitoring jadwal pelajaran dan kegiatan belajar mengajar secara real-time." />
   <meta name="twitter:image" content="https://monitoring-kbm.netlify.app/banner.png" />
 
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Jadwal Pelajaran Digital</title>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Roboto:wght@400;700&family=Rajdhani:wght@600&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Roboto:wght@400;700&family=Rajdhani:wght@600&display=swap"
+    rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -112,7 +117,8 @@
         text-align: center;
       }
 
-      .header-content h1, .header-content h2 {
+      .header-content h1,
+      .header-content h2 {
         font-size: 1rem;
       }
 
@@ -235,12 +241,12 @@
         flex-direction: column;
         gap: 8px;
       }
-      
+
       .info-column-1,
       .info-column-2 {
         padding: 10px;
       }
-      
+
       #dayDate,
       #shiftKBM,
       #jamKBM,
@@ -270,7 +276,8 @@
       overflow: hidden;
     }
 
-    th, td {
+    th,
+    td {
       padding: 7px 8px;
       text-align: center;
       border: none;
@@ -297,12 +304,15 @@
     table tr:first-child th:first-child {
       border-top-left-radius: 8px;
     }
+
     table tr:first-child th:last-child {
       border-top-right-radius: 8px;
     }
+
     table tr:last-child td:first-child {
       border-bottom-left-radius: 8px;
     }
+
     table tr:last-child td:last-child {
       border-bottom-right-radius: 8px;
     }
@@ -359,77 +369,272 @@
       color: #00ffff;
       text-decoration: none;
     }
+
+    /* Modal Styles */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background: #1e1e2f;
+      padding: 20px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+      border: 1px solid #444;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      border-bottom: 1px solid #444;
+      padding-bottom: 10px;
+    }
+
+    .modal-title {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #FFD700;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: #aaa;
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .close-btn:hover {
+      color: #fff;
+    }
+
+    .report-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+
+    .report-table th,
+    .report-table td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid #444;
+    }
+
+    .report-table th {
+      color: #00BFFF;
+      font-weight: bold;
+    }
+
+    .status-options {
+      display: flex;
+      gap: 10px;
+    }
+
+    .status-label {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.9rem;
+    }
+
+    .modal-footer {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
+    .btn-report {
+      padding: 10px 15px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.2s;
+    }
+
+    .btn-copy {
+      background: #444;
+      color: white;
+    }
+
+    .btn-wa {
+      background: #25D366;
+      color: white;
+    }
+
+    .btn-report:hover {
+      opacity: 0.9;
+    }
+
+    /* Floating Action Button */
+    .fab-report {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #FFD700;
+      color: #000;
+      padding: 12px 20px;
+      border-radius: 50px;
+      font-weight: bold;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+      z-index: 999;
+      border: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: transform 0.2s;
+    }
+
+    .fab-report:hover {
+      transform: scale(1.05);
+    }
+
+    @media (max-width: 480px) {
+      .status-options {
+        flex-direction: column;
+        gap: 5px;
+      }
+
+      .modal-content {
+        padding: 15px;
+        width: 95%;
+      }
+    }
   </style>
 </head>
+
 <body>
-<header>
-  <div class="header-grid">
-    <div class="logo-container">
-      <img src="logo.png" alt="Logo Madrasah" class="logo">
+  <header>
+    <div class="header-grid">
+      <div class="logo-container">
+        <img src="logo.png" alt="Logo Madrasah" class="logo">
+      </div>
+      <div class="header-content">
+        <h1>MTs. AN-NUR BULULAWANG</h1>
+        <h2>Jl. Raya Bululawang, Kab. Malang, Jatim 65171</h2>
+      </div>
     </div>
-    <div class="header-content">
-      <h1>MTs. AN-NUR BULULAWANG</h1>
-      <h2>Jl. Raya Bululawang, Kab. Malang, Jatim 65171</h2>
+    <hr class="header-hr">
+    <div id="subjudul">E-JADWAL KBM</div>
+
+    <div id="infoHeader">
+      <div id="clock">--:--:--</div>
+    </div>
+
+    <!-- Kolom transparan untuk info KBM dan guru piket -->
+    <div class="info-columns">
+      <!-- Kolom transparan 1 - Info KBM -->
+      <div class="info-column-1">
+        <div id="dayDate">Memuat tanggal...</div>
+        <div id="shiftKBM">Jadwal KBM</div>
+        <div id="jamKBM">Memuat jam KBM...</div>
+      </div>
+
+      <!-- Kolom transparan 2 - Guru Piket -->
+      <div class="info-column-2">
+        <div class="piket-title">Guru Piket:</div>
+        <div id="guruPiket">Loading...</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>KELAS</th>
+          <th>MATA PELAJARAN</th>
+          <th>NAMA GURU</th>
+        </tr>
+      </thead>
+      <tbody id="dataTabel">
+        <tr>
+          <td colspan="3">Memuat data...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div id="controls">
+    <div class="first-row">
+      <button onclick="nextTheme()">🎨 Tema</button>
+      <button onclick="toggleFont()">🔠 Font</button>
+      <button onclick="adjustFont(0.05)">A+</button>
+      <button onclick="adjustFont(-0.05)">A-</button>
+    </div>
+    <div class="second-row">
+      <button onclick="adjustTime(-1)">🕘 -1 Jam</button>
+      <button onclick="adjustTime(1)">🕒 +1 Jam</button>
+      <button onclick="adjustDay(-1)">📆 -1 Hari</button>
+      <button onclick="adjustDay(1)">📅 +1 Hari</button>
     </div>
   </div>
-  <hr class="header-hr">
-  <div id="subjudul">E-JADWAL KBM</div>
 
-  <div id="infoHeader">
-    <div id="clock">--:--:--</div>
-  </div>
+  <footer>
+    Linktree: <a href="https://linktr.ee/matsanuba" target="_blank">matsanuba</a> |
+    IG: @mts_annur | FB: MTs An-Nur Bululawang | TikTok: @mts.annur.bululawang |
+    WA: 082169883168 | Web: <a href="https://mtsannur.sch.id" target="_blank">mtsannur.sch.id</a><br>
+    "Matsanuba, Jaya Bercahaya!"<br>
+    <em>Created by <a href="https://wa.me/+6285731447357" target="_blank">Matsanuba Management</a></em>
+  </footer>
 
-  <!-- Kolom transparan untuk info KBM dan guru piket -->
-  <div class="info-columns">
-    <!-- Kolom transparan 1 - Info KBM -->
-    <div class="info-column-1">
-      <div id="dayDate">Memuat tanggal...</div>
-      <div id="shiftKBM">Jadwal KBM</div>
-      <div id="jamKBM">Memuat jam KBM...</div>
+  <!-- Floating Action Button -->
+  <button class="fab-report" onclick="openReportModal()">
+    📝 Laporkan KBM Saat Ini
+  </button>
+
+  <!-- Report Modal -->
+  <div id="reportModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">Laporan Monitoring KBM</div>
+        <button class="close-btn" onclick="closeReportModal()">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th>Kelas</th>
+              <th>Mapel</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="reportTableBody">
+            <!-- Data will be populated by JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-report btn-copy" onclick="copyReportText()">📋 Copy Laporan</button>
+        <button class="btn-report btn-wa" onclick="sendToWhatsApp()">🚀 Laporkan ke WhatsApp</button>
+      </div>
     </div>
-    
-    <!-- Kolom transparan 2 - Guru Piket -->
-    <div class="info-column-2">
-      <div class="piket-title">Guru Piket:</div>
-      <div id="guruPiket">Loading...</div>
-    </div>
   </div>
-</header>
 
-<div class="table-wrapper">
-<table>
-  <thead>
-    <tr><th>KELAS</th><th>MATA PELAJARAN</th><th>NAMA GURU</th></tr>
-  </thead>
-  <tbody id="dataTabel">
-    <tr><td colspan="3">Memuat data...</td></tr>
-  </tbody>
-</table>
-</div>
-
-<div id="controls">
-  <div class="first-row">
-    <button onclick="nextTheme()">🎨 Tema</button>
-    <button onclick="toggleFont()">🔠 Font</button>
-    <button onclick="adjustFont(0.05)">A+</button>
-    <button onclick="adjustFont(-0.05)">A-</button>
-  </div>
-  <div class="second-row">
-    <button onclick="adjustTime(-1)">🕘 -1 Jam</button>
-    <button onclick="adjustTime(1)">🕒 +1 Jam</button>
-    <button onclick="adjustDay(-1)">📆 -1 Hari</button>
-    <button onclick="adjustDay(1)">📅 +1 Hari</button>
-  </div>
-</div>
-
-<footer>
-  Linktree: <a href="https://linktr.ee/matsanuba" target="_blank">matsanuba</a> |
-  IG: @mts_annur | FB: MTs An-Nur Bululawang | TikTok: @mts.annur.bululawang |
-  WA: 082169883168 | Web: <a href="https://mtsannur.sch.id" target="_blank">mtsannur.sch.id</a><br>
-  "Matsanuba, Jaya Bercahaya!"<br>
-  <em>Created by <a href="https://wa.me/+6285731447357" target="_blank">Matsanuba Management</a></em>
-</footer>
-
-<script src="script.js"></script>
+  <script src="script.js"></script>
 </body>
+
 </html>

@@ -18,6 +18,7 @@ const guruPiket = document.getElementById("guruPiket"); // Tambahkan elemen guru
 
 let timeOffset = 0;
 let dayOffset = 0;
+let currentScheduleData = []; // Store current schedule for reporting
 
 const themes = [
   "#0f2027", "#1e1e2f", "#2c3e50", "#3d3d3d", "#1a1a1a",
@@ -40,15 +41,15 @@ function updateClock() {
   now.setHours(now.getHours() + timeOffset);
   now.setDate(now.getDate() + dayOffset);
   clock.textContent = now.toLocaleTimeString('id-ID', { hour12: false });
-  
+
   // Ambil tanggal dengan format lengkap
   let dateString = now.toLocaleDateString('id-ID', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   });
-  
+
   // Ganti "Minggu" dengan "Ahad" untuk tampilan
   dateString = dateString.replace(/^Minggu,/, 'Ahad,');
-  
+
   dayDate.textContent = dateString;
 }
 
@@ -65,20 +66,20 @@ async function updateGuruPiket(hari, jam, isInKBMPeriod = false) {
     }
 
     const dataPiket = await fetch(endpointPiket).then(r => r.json());
-    
+
     // Tentukan shift berdasarkan jam
     const shift = jam < 12 ? 'PAGI' : 'SIANG';
     const shiftColumn = shift === 'PAGI' ? 'PIKET SHIFT PAGI' : 'PIKET SHIFT SIANG';
     const waColumn = shift === 'PAGI' ? 'WA PIKET SHIFT PAGI' : 'WA PIKET SHIFT SIANG';
-    
+
     // Cari data piket untuk hari ini
     const piketHariIni = dataPiket.filter(p => p.HARI && p.HARI.toUpperCase() === hari);
-    
+
     if (piketHariIni.length === 0) {
       guruPiket.textContent = 'Tidak ada data piket';
       return;
     }
-    
+
     // Ambil guru piket dan nomor WA untuk shift yang sesuai
     const daftarPiketData = piketHariIni
       .filter(p => p[shiftColumn] && p[shiftColumn].trim() !== '')
@@ -86,12 +87,12 @@ async function updateGuruPiket(hari, jam, isInKBMPeriod = false) {
         nama: p[shiftColumn].trim(),
         wa: p[waColumn] ? p[waColumn].replace(/\D/g, '') : null // ambil hanya angka
       }));
-    
+
     if (daftarPiketData.length === 0) {
       guruPiket.textContent = 'Tidak ada piket';
       return;
     }
-    
+
     // Buat HTML untuk menampilkan guru piket dengan link WA
     guruPiket.innerHTML = '';
     daftarPiketData.forEach(piket => {
@@ -105,7 +106,7 @@ async function updateGuruPiket(hari, jam, isInKBMPeriod = false) {
       }
       guruPiket.appendChild(div);
     });
-    
+
   } catch (err) {
     console.error("Gagal memuat data piket:", err);
     guruPiket.textContent = 'Error loading piket data';
@@ -118,18 +119,18 @@ async function fetchData() {
   now.setDate(now.getDate() + dayOffset);
   const jam = now.getHours();
   const menit = now.getMinutes();
-  
+
   // Ambil nama hari dalam bahasa Indonesia
   let hari = now.toLocaleDateString('id-ID', { weekday: 'long' }).toUpperCase();
-  
+
   // Konversi MINGGU menjadi AHAD untuk menyesuaikan dengan spreadsheet
   if (hari === 'MINGGU') {
     hari = 'AHAD';
   }
-  
+
   const shift = jam < 12 ? 'PUTRA' : 'PUTRI';
   const timeNow = `${jam.toString().padStart(2, '0')}:${menit.toString().padStart(2, '0')}`;
-  
+
   // Cek apakah hari ini Kamis
   const isKamis = hari === 'KAMIS';
 
@@ -142,7 +143,7 @@ async function fetchData() {
 
     // Pilih data bel sesuai hari (Kamis gunakan BEL KHUSUS, lainnya gunakan PERIODE BEL)
     const belData = isKamis ? dataBelKhusus : dataBel;
-    
+
     const jadwalShift = belData.filter(p => p.Shift === shift);
     let periodeSekarang = null;
 
@@ -167,25 +168,25 @@ async function fetchData() {
       dataTabel.innerHTML = `<tr><td colspan="3">Tidak ada KBM saat ini</td></tr>`;
       return;
     }
-    
+
     if (periodeSekarang['Jam Ke-'] === 'IST') {
       jamKBM.textContent = `Jam ISTIRAHAT`;
       dataTabel.innerHTML = `<tr><td colspan="3">Sedang istirahat</td></tr>`;
       return;
     }
-    
+
     const jamKeNow = periodeSekarang['Jam Ke-'];
     const jamMulai = periodeSekarang['Jam Mulai'];
     const jamSelesai = periodeSekarang['Jam Selesai'];
-    
+
     jamKBM.textContent = `Jam ke-${jamKeNow} (${jamMulai} - ${jamSelesai})`;
-    
+
     const jadwalSekarang = dataJadwal.filter(row =>
       row.Hari.toUpperCase() === hari &&
       row['Jam Ke-'] === jamKeNow &&
       row.Shift === shift
     );
-    
+
     if (jadwalSekarang.length === 0) {
       dataTabel.innerHTML = `<tr><td colspan="3">Tidak ada data jadwal untuk jam ini</td></tr>`;
       return;
@@ -202,6 +203,8 @@ async function fetchData() {
       return subA.localeCompare(subB);
     });
 
+    currentScheduleData = sortedJadwal; // Update global data
+
     dataTabel.innerHTML = "";
     sortedJadwal.forEach(row => {
       const kelas = row.Kelas;
@@ -213,7 +216,7 @@ async function fetchData() {
       if (noWa) {
         // Tambahkan informasi jadwal khusus ke pesan jika hari Kamis
         let jadwalInfo = isKamis ? " (Jadwal Khusus Hari Kamis)" : "";
-        
+
         const pesan = `📢 *Assalamualaikum Wr. Wb.*
 
 📝 Mohon izin untuk menginformasikan bahwa *Ust. ${guru}* pada hari ini memiliki jadwal mengajar di *kelas ${kelas}* untuk mapel *${mapel}* pada *Jam ke-${jamKeNow}*${jadwalInfo}.
@@ -221,7 +224,7 @@ async function fetchData() {
 🙏🏻 Atas perhatian dan kerjasamanya diucapkan terima kasih.
         
 📢 *Wassalamu'alaikum Wr. Wb.*`;
-        
+
         const urlWa = `https://wa.me/${noWa}?text=${encodeURIComponent(pesan)}`;
         guruDisplay = `<a href="${urlWa}" target="_blank" style="color:#00ffff;">${guru}</a>`;
       }
@@ -270,4 +273,124 @@ function adjustDay(offset) {
   dayOffset += offset;
   updateClock();
   fetchData();
+}
+
+// --- Report Modal Logic ---
+
+const reportModal = document.getElementById('reportModal');
+const reportTableBody = document.getElementById('reportTableBody');
+
+function openReportModal() {
+  reportModal.style.display = 'flex';
+  renderReportTable();
+}
+
+function closeReportModal() {
+  reportModal.style.display = 'none';
+}
+
+// Close modal when clicking outside
+reportModal.addEventListener('click', (e) => {
+  if (e.target === reportModal) {
+    closeReportModal();
+  }
+});
+
+function renderReportTable() {
+  reportTableBody.innerHTML = '';
+
+  if (!currentScheduleData || currentScheduleData.length === 0) {
+    reportTableBody.innerHTML = '<tr><td colspan="3" style="text-align:center;">Tidak ada data jadwal saat ini.</td></tr>';
+    return;
+  }
+
+  currentScheduleData.forEach((row, index) => {
+    const tr = document.createElement('tr');
+    const safeId = index; // Use index as unique ID part
+
+    tr.innerHTML = `
+      <td>${row.Kelas}</td>
+      <td>${row['Nama Mapel']}</td>
+      <td>
+        <div class="status-options">
+          <label class="status-label">
+            <input type="radio" name="status-${safeId}" value="✅" checked> ✅ Hadir
+          </label>
+          <label class="status-label">
+            <input type="radio" name="status-${safeId}" value="⚠️"> ⚠️ Telat
+          </label>
+          <label class="status-label">
+            <input type="radio" name="status-${safeId}" value="⛔"> ⛔ Izin/Alfa
+          </label>
+        </div>
+      </td>
+    `;
+    reportTableBody.appendChild(tr);
+  });
+}
+
+function generateReportText() {
+  const now = new Date();
+  now.setHours(now.getHours() + timeOffset);
+  now.setDate(now.getDate() + dayOffset);
+
+  // Format Date
+  const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+  let dateString = now.toLocaleDateString('id-ID', dateOptions);
+  dateString = dateString.replace(/^Minggu,/, 'Ahad,');
+
+  // Get Shift info from DOM
+  const shiftText = shiftKBM.textContent.replace('Jadwal KBM ', '');
+  const jamText = jamKBM.textContent;
+
+  // Get Guru Piket info
+  let piketNames = [];
+  const piketElements = guruPiket.querySelectorAll('div');
+  piketElements.forEach(el => {
+    piketNames.push(el.textContent.trim());
+  });
+  const piketString = piketNames.join('\n');
+
+  let report = `${dateString}\n`;
+  report += `Jadwal KBM ${shiftText}\n`;
+  report += `${jamText}\n`;
+  report += `Guru Piket:\n${piketString}\n\n`;
+
+  // Iterate rows to get status
+  if (currentScheduleData && currentScheduleData.length > 0) {
+    currentScheduleData.forEach((row, index) => {
+      const status = document.querySelector(`input[name="status-${index}"]:checked`).value;
+      report += `${row.Kelas} ${status} ${row['Nama Mapel']}\n`;
+    });
+  } else {
+    report += "Tidak ada jadwal aktif.\n";
+  }
+
+  report += `\nLink Monitoring: https://monitoring-kbm.netlify.app/`;
+
+  return report;
+}
+
+async function copyReportText() {
+  const text = generateReportText();
+  try {
+    await navigator.clipboard.writeText(text);
+    alert('Laporan berhasil disalin ke clipboard!');
+  } catch (err) {
+    console.error('Gagal menyalin:', err);
+    alert('Gagal menyalin teks. Mohon salin manual.');
+  }
+}
+
+async function sendToWhatsApp() {
+  const text = generateReportText();
+  try {
+    await navigator.clipboard.writeText(text);
+    // Open WhatsApp Group
+    window.open('https://chat.whatsapp.com/5vTwMCXv9ZY6pBA0aDIGB2', '_blank');
+  } catch (err) {
+    console.error('Gagal menyalin:', err);
+    alert('Gagal menyalin teks laporan. Namun akan tetap membuka WhatsApp.');
+    window.open('https://chat.whatsapp.com/5vTwMCXv9ZY6pBA0aDIGB2', '_blank');
+  }
 }
