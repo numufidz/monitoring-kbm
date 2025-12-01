@@ -356,21 +356,22 @@ function generateReportText() {
   });
   const piketString = piketNames.join('\n');
 
-  let report = `${dateString}\n`;
-  report += `Jadwal KBM ${shiftText}\n`;
-  report += `${jamText}\n`;
-  report += `Guru Piket:\n${piketString}\n\n`;
+  let report = `*${dateString}*\n`;
+  report += `*Jadwal KBM ${shiftText}*\n`;
+  report += `*${jamText}*\n`;
+  report += `*Guru Piket:*\n${piketString}\n\n`;
 
   // Iterate rows to get status
   if (currentScheduleData && currentScheduleData.length > 0) {
     currentScheduleData.forEach((row, index) => {
       const status = document.querySelector(`input[name="status-${index}"]:checked`).value;
-      report += `${row.Kelas} ${status} ${row['Nama Mapel']}\n`;
+      report += `*${row.Kelas}* ${status} ${row['Nama Mapel']}\n`;
     });
   } else {
     report += "Tidak ada jadwal aktif.\n";
   }
 
+  report += `\nKeterangan:\n✅ : Hadir\n⚠️ : Belum Datang\n⛔ : Izin/Alfa\n`;
   report += `\nLink Monitoring: https://monitoring-kbm.netlify.app/`;
 
   return report;
