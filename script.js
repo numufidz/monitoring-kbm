@@ -372,13 +372,8 @@ function generateReportText() {
     report += "Tidak ada jadwal aktif.\n";
   }
 
-<<<<<<< HEAD
-  report += `\nKeterangan:\n✅ : Hadir\n⚠️ : Belum Datang\n⛔ : Tidak Hadir\n`;
-  report += `\nLink Monitoring: https://monitoring-kbm.netlify.app/`;
-=======
   report += `\nKeterangan:\n✅ : Hadir\n⚠️ : Belum Datang\n⛔ : Izin/Alfa\n`;
   report += `\nLink E-Jadwal: monitoring-kbm.netlify.app/`;
->>>>>>> 8e846ea399eb7a262f8a46f99342276ff94759bc
 
   return report;
 }
