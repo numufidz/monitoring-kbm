@@ -21,12 +21,30 @@ let dayOffset = 0;
 let currentScheduleData = [];
 
 const themes = [
-  "#0f2027", "#1e1e2f", "#2c3e50", "#3d3d3d", "#1a1a1a",
-  "linear-gradient(to right, #0f2027, #203a43, #2c5364)",
-  "linear-gradient(to right, #2c3e50, #4ca1af)",
-  "linear-gradient(to right, #141E30, #243B55)",
-  "linear-gradient(to right, #232526, #414345)",
-  "linear-gradient(to right, #373B44, #4286f4)"
+  // Deep Ocean Blue - menenangkan dan profesional
+  "linear-gradient(135deg, #0f2027, #203a43, #2c5364)",
+  // Midnight Navy - elegan dan tidak menyilaukan
+  "linear-gradient(135deg, #141E30, #243B55)",
+  // Charcoal Gray - netral dan modern
+  "linear-gradient(135deg, #232526, #414345)",
+  // Dark Slate - hangat dan nyaman
+  "linear-gradient(135deg, #2c3e50, #34495e)",
+  // Dusty Blue - profesional dan sejuk
+  "linear-gradient(135deg, #2c3e50, #4ca1af)",
+  // Purple Dusk - unik dan menenangkan
+  "linear-gradient(135deg, #2b1055, #7597de)",
+  // Forest Night - natural dan fresh
+  "linear-gradient(135deg, #0f2027, #1a4731, #2c5364)",
+  // Deep Space - futuristik dan fokus
+  "linear-gradient(135deg, #000428, #004e92)",
+  // Warm Charcoal - arang hangat dengan aksen biru
+  "linear-gradient(135deg, #373B44, #4286f4)",
+  // Soft Teal - menyegarkan tanpa terang
+  "linear-gradient(135deg, #134E5E, #71B280)",
+  // Arctic Night - sejuk dan fokus
+  "linear-gradient(135deg, #1e3c72, #2a5298)",
+  // Deep Teal - tenang dan produktif
+  "linear-gradient(135deg, #0f4c75, #3282b8)"
 ];
 
 let currentTheme = Math.floor(Math.random() * themes.length);
