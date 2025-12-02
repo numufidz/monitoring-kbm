@@ -326,7 +326,7 @@ function renderReportTable() {
             <input type="radio" name="status-${safeId}" value="⚠️"> ⚠️ Telat
           </label>
           <label class="status-label">
-            <input type="radio" name="status-${safeId}" value="⛔"> ⛔ Tidak Hadir
+            <input type="radio" name="status-${safeId}" value="⛔"> ⛔ Absen
           </label>
         </div>
       </td>
@@ -372,8 +372,8 @@ function generateReportText() {
     report += "Tidak ada jadwal aktif.\n";
   }
 
-  report += `\nKeterangan:\n✅ : Hadir\n⚠️ : Belum Datang\n⛔ : Izin/Alfa\n`;
-  report += `\nLink E-Jadwal: monitoring-kbm.netlify.app/`;
+  report += `\nKeterangan:\n✅ : Hadir\n⚠️ : Belum Datang\n⛔ : Absen\n`;
+  report += `\n*Link E-Jadwal*: monitoring-kbm.netlify.app/`;
 
   return report;
 }
