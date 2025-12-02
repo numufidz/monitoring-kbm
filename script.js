@@ -298,8 +298,7 @@ function renderReportTable() {
     tr.innerHTML = `
       <td>${row.Kelas}</td>
       <td>
-        ${row['Nama Mapel']}
-        <span class="teacher-name-small">${row['Nama Lengkap Guru']}</span>
+        ${row['Nama Mapel']} <span class="teacher-name-small">${row['Nama Lengkap Guru']}</span>
         <div class="status-options">
           <label class="status-label">
             <input type="radio" name="status-${safeId}" value="✅" checked> ✅ Hadir
