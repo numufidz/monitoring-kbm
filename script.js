@@ -331,14 +331,13 @@ function generateReportText() {
   let piketNames = [];
   const piketElements = guruPiket.querySelectorAll('div');
   piketElements.forEach(el => {
-    piketNames.push(el.textContent.trim());
+    piketNames.push(`*${el.textContent.trim()}*`);
   });
   const piketString = piketNames.join('\n');
 
-  let report = `*${dateString}*\n`;
-  report += `*Jadwal KBM ${shiftText}*\n`;
-  report += `*${jamText}*\n`;
-  report += `*Guru Piket:*\n${piketString}\n\n`;
+  let report = `*LAPORAN KBM*\n`;
+  report += `${dateString}\n`;
+  report += `${jamText}\n\n`;
 
   if (currentScheduleData && currentScheduleData.length > 0) {
     currentScheduleData.forEach((row, index) => {
@@ -350,6 +349,7 @@ function generateReportText() {
   }
 
   report += `\nKeterangan:\n✅ : Hadir\n⚠️ : Belum Datang\n⛔ : Absen\n`;
+  report += `\nGuru Piket:\n${piketString}\n`;
   report += `\n*Link E-Jadwal*: monitoring-kbm.netlify.app/`;
 
   return report;
