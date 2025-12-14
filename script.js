@@ -79,11 +79,6 @@ function createGuruLookupMap(dbGuruMapelData) {
   const map = new Map();
   if (!dbGuruMapelData || !Array.isArray(dbGuruMapelData)) return map;
   
-  // Log first row to check column names
-  if (dbGuruMapelData.length > 0) {
-    console.log('DB_GURU_MAPEL columns:', Object.keys(dbGuruMapelData[0]));
-  }
-  
   dbGuruMapelData.forEach(row => {
     const kode = row['KODE_DB_ASC'];
     if (kode && kode.trim()) {
@@ -98,11 +93,6 @@ function createGuruLookupMap(dbGuruMapelData) {
     }
   });
   
-  console.log('Guru Lookup Map created:', map.size, 'entries');
-  if (map.size > 0) {
-    const firstEntry = Array.from(map.entries())[0];
-    console.log('Sample entry:', firstEntry[0], firstEntry[1]);
-  }
   return map;
 }
 
@@ -165,7 +155,7 @@ function transformDbAscWideToLong(dbAscWideData, guruLookupMap, kelasShiftMap) {
         KODE_DB_ASC: kodeTrim,
         'Nama Mapel': guruInfo.mapel,
         'Nama Lengkap Guru': guruInfo.nama_guru,
-        'No. WA': guruInfo.no_wa
+        'NO. WA': guruInfo.no_wa
       });
     });
   });
@@ -344,8 +334,7 @@ async function fetchData() {
       const kelas = row.Kelas;
       const mapel = row['Nama Mapel'];
       const guru = row['Nama Lengkap Guru'];
-      // Handle both 'No. WA' and 'NO. WA' column names
-      const noWaRaw = row['No. WA'] || row['NO. WA'] || '';
+      const noWaRaw = row['NO. WA'] || row['No. WA'] || '';
       
       // Extract digits only
       const digits = noWaRaw ? noWaRaw.replace(/\D/g, '') : '';
