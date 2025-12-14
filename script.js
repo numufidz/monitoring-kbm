@@ -73,7 +73,7 @@ nextTheme();
 
 /**
  * Build guru lookup map dari DB_GURU_MAPEL
- * Maps KODE_DB_ASC → {nama_guru, mapel}
+ * Maps KODE_DB_ASC → {nama_guru, mapel, no_wa}
  */
 function createGuruLookupMap(dbGuruMapelData) {
   const map = new Map();
@@ -82,14 +82,18 @@ function createGuruLookupMap(dbGuruMapelData) {
   dbGuruMapelData.forEach(row => {
     const kode = row['KODE_DB_ASC'];
     if (kode && kode.trim()) {
+      // Try different column name variations
+      const noWa = row['No. WA'] || row['NO. WA'] || row['NO WA'] || row['No WA'] || '';
+      
       map.set(kode.trim(), {
         nama_guru: row['NAMA GURU'] || '',
         mapel: row['MAPEL_LONG'] || row['MAPEL_SHORT'] || '',
-        no_wa: row['No. WA'] || ''
+        no_wa: noWa
       });
     }
   });
   
+  console.log('Guru Lookup Map created:', map.size, 'entries');
   return map;
 }
 
@@ -327,17 +331,23 @@ async function fetchData() {
     currentScheduleData = sortedJadwal;
 
     dataTabel.innerHTML = "";
-    sortedJadwal.forEach(row => {
+    sortedJadwal.forEach((row, idx) => {
       const kelas = row.Kelas;
       const mapel = row['Nama Mapel'];
       const guru = row['Nama Lengkap Guru'];
       // Handle both 'No. WA' and 'NO. WA' column names
       const noWaRaw = row['No. WA'] || row['NO. WA'] || '';
       
+      // Log for debugging
+      if (idx === 0) {
+        console.log('First row data:', row);
+        console.log('noWaRaw:', noWaRaw, 'Type:', typeof noWaRaw);
+      }
+      
       // Extract digits only
-      const digits = noWaRaw.replace(/\D/g, '');
+      const digits = noWaRaw ? noWaRaw.replace(/\D/g, '') : '';
       // Format to 62 prefix (Indonesia)
-      const noWa = digits.startsWith('62') ? digits : (digits.startsWith('0') ? '62' + digits.substring(1) : '62' + digits);
+      const noWa = digits.startsWith('62') ? digits : (digits.startsWith('0') ? '62' + digits.substring(1) : (digits ? '62' + digits : ''));
 
       let guruDisplay = guru;
       if (digits) {
@@ -353,6 +363,7 @@ async function fetchData() {
 
         const urlWa = `https://wa.me/${noWa}?text=${encodeURIComponent(pesan)}`;
         guruDisplay = `<a href="${urlWa}" target="_blank" class="guru-link">${guru}</a>`;
+        console.log(`${guru}: ${noWaRaw} → ${noWa} → ${urlWa}`);
       }
 
       const tr = document.createElement("tr");
