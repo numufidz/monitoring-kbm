@@ -345,13 +345,13 @@ async function fetchData() {
       if (digits && noWa) {
         let jadwalInfo = isKamis ? " (Jadwal Khusus Hari Kamis)" : "";
 
-        const pesan = `Assalamualaikum Wr. Wb.
+        const pesan = `📢 *Assalamualaikum Wr. Wb.*
 
-Mohon izin untuk menginformasikan bahwa Ust. ${guru} pada hari ini memiliki jadwal mengajar di kelas ${kelas} untuk mapel ${mapel} pada Jam ke-${jamKeNow}${jadwalInfo}.
+📝 Mohon izin untuk menginformasikan bahwa *Ust. ${guru}* pada hari ini memiliki jadwal mengajar di *kelas ${kelas}* untuk mapel *${mapel}* pada *Jam ke-${jamKeNow}*${jadwalInfo}.
         
-Atas perhatian dan kerjasamanya diucapkan terima kasih.
+🙏🏻 Atas perhatian dan kerjasamanya diucapkan terima kasih.
         
-Wassalamu'alaikum Wr. Wb.`;
+📢 *Wassalamu'alaikum Wr. Wb.*`;
 
         const urlWa = `https://wa.me/${noWa}?text=${encodeURIComponent(pesan)}`;
         guruDisplay = `<a href="${urlWa}" target="_blank" class="guru-link">${guru}</a>`;
