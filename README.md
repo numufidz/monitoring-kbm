@@ -1,196 +1,157 @@
-# Guru Piket Monitoring System
+# Monitoring KBM - Guru Piket System
 
-**Sistem monitoring dan approval jadwal guru piket (jadwal KBM) real-time**
-
----
-
-## 📖 Documentation
-
-Dokumentasi proyek ini tersedia dalam bahasa Indonesia:
-
-### Panduan Utama
-- **[IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md)** - Step-by-step migration ke v2.0 (START HERE)
-- **[MIGRATION_v2.0.md](MIGRATION_v2.0.md)** - Dokumentasi teknis lengkap
-- **[TRANSFORMATION_FUNCTIONS.js](TRANSFORMATION_FUNCTIONS.js)** - Functions yang perlu ditambahkan ke script.js
+**Sistem monitoring real-time jadwal guru piket dan jadwal pelajaran**
 
 ---
 
-## 🎯 Fitur Utama
+## ✅ Status: Production Ready
 
-### 1. **Monitoring Real-Time**
-- Menampilkan guru dan jadwal pelajaran saat ini
+**Version 2.0** | Last Updated: Desember 2025
+
+- ✅ WhatsApp integration dengan emoji work sempurna
+- ✅ Real-time monitoring jadwal
+- ✅ Data sync otomatis dari Google Sheets
+- ✅ Responsive mobile & desktop
+
+---
+
+## 🎯 Fitur
+
+### 📱 WhatsApp Integration
+- **Klik nama guru → buka WhatsApp langsung**
+- Pesan otomatis dengan info jadwal
+- Emoji work dengan sempurna (📢 📝 🙏🏻)
+- Format professional dengan markdown
+
+### 📊 Monitoring Real-Time
+- Jadwal guru dan kelas per jam
 - Update otomatis setiap 5 detik
-- Informasi kelas, mata pelajaran, dan guru pengajar
+- Filter by shift (Putra/Putri)
+- Informasi lengkap: guru, mapel, jam
 
-### 2. **Sistem Approval**
-- Guru piket dapat approve/reject jadwal
-- Pilihan status: Hadir, Izin, Sakit, Tanpa Keterangan
-- Catatan untuk setiap approval
+### 👥 Guru Piket
+- Daftar guru piket per shift (PAGI/SIANG)
+- Quick contact via WhatsApp
+- Auto-update sesuai waktu & hari
 
-### 3. **Laporan**
-- Generate laporan kehadiran guru per periode
-- Export data untuk analisis
-- Tracking approval history
+### 🔄 Data Integration (v2.0)
+- **Google Sheets DataSource:**
+  - `DB_ASC` - Jadwal WIDE format (HARI, Jam Ke-, Kelas)
+  - `DB_GURU_MAPEL` - Master guru (nama, mapel, No. WA)
+  - `KELAS_SHIFT` - Class-to-shift mapping (7A=PUTRA, 7D=PUTRI)
+  - `PERIODE BEL` - Bell schedule reguler
+  - `BEL KHUSUS` - Bell schedule Kamis
+  - `PIKET` - Guru piket roster
 
-### 4. **Data Integration** (v2.0)
-- Terintegrasi dengan Google Sheets
-- Sheet: DB_ASC (jadwal), DB_GURU_MAPEL (master guru), KELAS_SHIFT (mapping)
-- Auto-sync setiap fetch data
-- No pre-conversion needed
-
----
-
-## 🚀 Quick Start
-
-### Prasyarat
-- Google Sheets access (spreadsheet shared)
-- Modern web browser
-- Internet connection
-
-### Setup
-1. Buka `index.html` di browser
-2. Lihat monitoring jadwal real-time
-3. Approve/reject jadwal sesuai kebutuhan
-
-### Spreadsheet Configuration
-- **Spreadsheet ID:** `1LgqAr0L66JLtygqTqZRXOMKT06_IMopYlsEGc5nVp4I`
-- **Sheets Required:**
-  - `DB_ASC` - Schedule (WIDE format)
-  - `DB_GURU_MAPEL` - Guru data
-  - `KELAS_SHIFT` - Class to shift mapping
-  - `PERIODE BEL` - Bell schedule
-  - `BEL KHUSUS` - Thursday special schedule
-  - `PIKET` - Duty roster
+- **Transformasi:** WIDE format → LONG format on-the-fly
+- **Real-time:** No pre-conversion needed
+- **Auto-sync:** Data updated setiap fetch
 
 ---
 
-## 🔄 Migration Status
+## 🚀 Deployment
 
-### Current Version: v2.0 (IN PROGRESS)
+**Live:** [monitoring-kbm.netlify.app](https://monitoring-kbm.netlify.app)
 
-**What's New:**
-- ✅ Dynamic data structure using DB_ASC (WIDE), DB_GURU_MAPEL, KELAS_SHIFT
-- ✅ No hardcoded values for class-to-shift mapping
-- ✅ Single source of truth for all data
-- 🔄 Implementation: See [IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md)
-
-**Timeline:**
-1. Read `IMPLEMENTATION_GUIDE.md` (5 min)
-2. Update script.js constants (5 min)
-3. Add transformation functions (5 min)
-4. Update fetchData() (5 min)
-5. Test and verify (10 min)
+Hosted di Netlify with auto-deploy from GitHub.
 
 ---
 
-## 📁 Project Structure
+## 🔧 Technical Stack
+
+- **Frontend:** HTML5, CSS3, Vanilla JavaScript
+- **Data:** Google Sheets (OpenSheet API)
+- **Hosting:** Netlify (static site)
+- **Mobile:** Responsive PWA-ready
+
+---
+
+## 📁 File Structure
 
 ```
 monitoring-kbm/
-├── index.html                    # Main HTML file
-├── script.js                     # Main application logic (398 lines)
-├── manifest.json                 # PWA configuration
-├── icon.png, banner.png, logo.png # Images
-│
-├── IMPLEMENTATION_GUIDE.md        # 🎯 START HERE for migration
-├── MIGRATION_v2.0.md             # Full technical docs
-├── TRANSFORMATION_FUNCTIONS.js   # Functions to copy-paste
-└── README.md                     # This file
+├── index.html              # Main UI
+├── script.js               # Logic & data handling
+├── manifest.json           # PWA manifest
+├── .netlify.toml          # Netlify config (UTF-8 headers)
+├── README.md              # This file
+└── [static assets]        # logo, icon, banner
 ```
 
 ---
 
-## 🛠️ Technical Stack
+## 🛠️ Development
 
-- **Frontend:** HTML5, CSS3, JavaScript (Vanilla)
-- **Data Source:** Google Sheets API (via OpenSheet)
-- **Authentication:** None (public sheet access)
-- **Deployment:** Static site hosting (Netlify, GitHub Pages, etc.)
+### Local Testing
+```bash
+npx serve .
+# Opens on http://localhost:3000 (or available port)
+```
+
+### Git Workflow
+```bash
+git add .
+git commit -m "description"
+git push origin main
+```
+
+Auto-deploy triggers on push to GitHub.
 
 ---
 
-## 📊 Data Structure (v2.0)
+## 📝 Data Schema (Google Sheets)
 
-### Input: Google Sheets Sheets
+### DB_ASC
+WIDE format - columns: HARI, Jam Ke-, 7A, 7B, 7C, ... 9H (guru codes)
 
-**DB_ASC (WIDE Format):**
-```
-HARI   | Jam Ke- | 7A     | 7B     | ... | 7D     | ...
--------|---------|--------|--------|-----|--------|-----
-SABTU  | 1       | BAR.23 | ASW.37 | ... | THI.40 | ...
-```
+### DB_GURU_MAPEL
+LONG format - columns: KODE_GURU, NAMA GURU, KODE_DB_ASC, MAPEL_LONG, MAPEL_SHORT, NO. WA
 
-**DB_GURU_MAPEL:**
-```
-KODE_DB_ASC | NAMA GURU       | MAPEL_LONG
-------------|-----------------|----------
-BAR.23      | Budi Raharjo    | Bahasa Inggris
-```
+### KELAS_SHIFT
+LONG format - columns: KELAS, SHIFT (PUTRA/PUTRI mapping)
 
-**KELAS_SHIFT:**
-```
-KELAS | SHIFT
-------|-------
-7A    | PUTRA
-7D    | PUTRI
-```
+### PERIODE BEL
+Bell schedule - columns: Shift, Jam Ke-, Jam Mulai, Jam Selesai
 
-### Output: currentScheduleData (LONG Format)
-```javascript
-[
-  {
-    Hari: "SABTU",
-    "Jam Ke-": "1",
-    Shift: "PUTRA",
-    Kelas: "7A",
-    KODE_DB_ASC: "BAR.23",
-    "Nama Mapel": "Bahasa Inggris",
-    "Nama Lengkap Guru": "Budi Raharjo"
-  },
-  ...
-]
-```
+### BEL KHUSUS
+Thursday schedule - columns: Shift, Jam Ke-, Jam Mulai, Jam Selesai
+
+### PIKET
+Teacher roster - columns: HARI, PIKET SHIFT PAGI, WA PIKET SHIFT PAGI, PIKET SHIFT SIANG, WA PIKET SHIFT SIANG
 
 ---
 
-## 🔗 Related Projects
+## 🐛 Known Issues & Solutions
 
-Proyek terkait yang menggunakan spreadsheet yang sama:
-- **[tv-monitoring-kbm](../tv-monitoring-kbm)** - Monitoring untuk tampilan TV kantor guru (v2.0 completed)
+**Emoji corrupt on Android Chrome?**
+- ✅ SOLVED: Use `window.location.href` instead of `<a href>` attribute
+- Bypass Chrome URL encoding quirk
+
+**Data tidak sync?**
+- Check Google Sheets URL & sheet names
+- Verify spreadsheet sharing permissions
+- Check browser console for API errors
+
+**WhatsApp link tidak trigger?**
+- Install WhatsApp di device
+- Check browser WhatsApp Web app compatibility
 
 ---
 
 ## 📞 Support
 
-### Dokumentasi
-- Lihat `IMPLEMENTATION_GUIDE.md` untuk step-by-step migration
-- Lihat `MIGRATION_v2.0.md` untuk technical details
-- Check `TRANSFORMATION_FUNCTIONS.js` untuk code snippets
-
-### Troubleshooting
-- Buka browser console (F12) untuk error messages
-- Check Network tab untuk verify data fetches
-- Lihat ini untuk common issues: [MIGRATION_v2.0.md](MIGRATION_v2.0.md#troubleshooting)
+For issues or questions:
+1. Check Google Sheets data validity
+2. Verify OpenSheet API connectivity
+3. Check browser console (F12) for errors
+4. Test in desktop browser first
 
 ---
 
-## 📝 License
+## 📄 License
 
-Same as parent project
-
----
-
-## 🎯 Next Steps
-
-1. **Read:** [IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md) (5 minutes)
-2. **Implement:** Follow step-by-step guide in the file (20 minutes)
-3. **Test:** Verify all features work (10 minutes)
-4. **Done!** Ready to use v2.0
+Project for MTs. An-Nur Bululawang
 
 ---
 
-**Last Updated:** December 14, 2024  
-**Version:** 2.0 (In Implementation)  
-**Status:** Ready for Code Migration  
-
-Spreadsheet masih belum punya KELAS_SHIFT sheet? Lihat `MIGRATION_v2.0.md` untuk struktur yang dibutuhkan.
+**Last Commit:** 061d82b - v2.0 with working emoji + window.location WhatsApp handler
