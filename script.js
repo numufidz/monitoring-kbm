@@ -331,10 +331,16 @@ async function fetchData() {
       const kelas = row.Kelas;
       const mapel = row['Nama Mapel'];
       const guru = row['Nama Lengkap Guru'];
-      const noWa = row['No. WA']?.replace(/\D/g, '');
+      // Handle both 'No. WA' and 'NO. WA' column names
+      const noWaRaw = row['No. WA'] || row['NO. WA'] || '';
+      
+      // Extract digits only
+      const digits = noWaRaw.replace(/\D/g, '');
+      // Format to 62 prefix (Indonesia)
+      const noWa = digits.startsWith('62') ? digits : (digits.startsWith('0') ? '62' + digits.substring(1) : '62' + digits);
 
       let guruDisplay = guru;
-      if (noWa) {
+      if (digits) {
         let jadwalInfo = isKamis ? " (Jadwal Khusus Hari Kamis)" : "";
 
         const pesan = `📢 *Assalamualaikum Wr. Wb.*
@@ -346,7 +352,7 @@ async function fetchData() {
 📢 *Wassalamu'alaikum Wr. Wb.*`;
 
         const urlWa = `https://wa.me/${noWa}?text=${encodeURIComponent(pesan)}`;
-        guruDisplay = `<a href="${urlWa}" target="_blank" style="color:#00ffff;">${guru}</a>`;
+        guruDisplay = `<a href="${urlWa}" target="_blank" class="guru-link">${guru}</a>`;
       }
 
       const tr = document.createElement("tr");
