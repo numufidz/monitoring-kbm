@@ -84,7 +84,8 @@ function createGuruLookupMap(dbGuruMapelData) {
     if (kode && kode.trim()) {
       map.set(kode.trim(), {
         nama_guru: row['NAMA GURU'] || '',
-        mapel: row['MAPEL_LONG'] || row['MAPEL_SHORT'] || ''
+        mapel: row['MAPEL_LONG'] || row['MAPEL_SHORT'] || '',
+        no_wa: row['No. WA'] || ''
       });
     }
   });
@@ -114,7 +115,7 @@ function createKelasShiftMap(kelasShiftData) {
 /**
  * Transform DB_ASC WIDE format → LONG format
  * WIDE: {HARI: "SABTU", "Jam Ke-": "1", "7A": "BAR.23", "7B": "ASW.37", ..., "7D": "THI.40", ...}
- * LONG: [{Hari: "SABTU", "Jam Ke-": "1", Shift: "PUTRA", Kelas: "7A", KODE_DB_ASC: "BAR.23", nama_guru: "...", mapel: "..."}, ...]
+ * LONG: [{Hari: "SABTU", "Jam Ke-": "1", Shift: "PUTRA", Kelas: "7A", KODE_DB_ASC: "BAR.23", nama_guru: "...", mapel: "...", no_wa: "..."}, ...]
  */
 function transformDbAscWideToLong(dbAscWideData, guruLookupMap, kelasShiftMap) {
   if (!dbAscWideData || !Array.isArray(dbAscWideData)) return [];
@@ -140,7 +141,7 @@ function transformDbAscWideToLong(dbAscWideData, guruLookupMap, kelasShiftMap) {
       if (!kode || !kode.trim()) return;
       
       const kodeTrim = kode.trim();
-      const guruInfo = guruLookupMap.get(kodeTrim) || { nama_guru: '', mapel: '' };
+      const guruInfo = guruLookupMap.get(kodeTrim) || { nama_guru: '', mapel: '', no_wa: '' };
       const shift = kelasShiftMap.get(kelas) || 'UNKNOWN';
       
       result.push({
@@ -150,7 +151,8 @@ function transformDbAscWideToLong(dbAscWideData, guruLookupMap, kelasShiftMap) {
         Kelas: kelas,
         KODE_DB_ASC: kodeTrim,
         'Nama Mapel': guruInfo.mapel,
-        'Nama Lengkap Guru': guruInfo.nama_guru
+        'Nama Lengkap Guru': guruInfo.nama_guru,
+        'No. WA': guruInfo.no_wa
       });
     });
   });
