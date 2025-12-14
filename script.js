@@ -79,11 +79,16 @@ function createGuruLookupMap(dbGuruMapelData) {
   const map = new Map();
   if (!dbGuruMapelData || !Array.isArray(dbGuruMapelData)) return map;
   
+  // Log first row to check column names
+  if (dbGuruMapelData.length > 0) {
+    console.log('DB_GURU_MAPEL columns:', Object.keys(dbGuruMapelData[0]));
+  }
+  
   dbGuruMapelData.forEach(row => {
     const kode = row['KODE_DB_ASC'];
     if (kode && kode.trim()) {
       // Try different column name variations
-      const noWa = row['No. WA'] || row['NO. WA'] || row['NO WA'] || row['No WA'] || '';
+      const noWa = row['NO. WA'] || row['No. WA'] || row['NO WA'] || row['No WA'] || row['NO.WA'] || '';
       
       map.set(kode.trim(), {
         nama_guru: row['NAMA GURU'] || '',
@@ -94,6 +99,10 @@ function createGuruLookupMap(dbGuruMapelData) {
   });
   
   console.log('Guru Lookup Map created:', map.size, 'entries');
+  if (map.size > 0) {
+    const firstEntry = Array.from(map.entries())[0];
+    console.log('Sample entry:', firstEntry[0], firstEntry[1]);
+  }
   return map;
 }
 
@@ -338,32 +347,25 @@ async function fetchData() {
       // Handle both 'No. WA' and 'NO. WA' column names
       const noWaRaw = row['No. WA'] || row['NO. WA'] || '';
       
-      // Log for debugging
-      if (idx === 0) {
-        console.log('First row data:', row);
-        console.log('noWaRaw:', noWaRaw, 'Type:', typeof noWaRaw);
-      }
-      
       // Extract digits only
       const digits = noWaRaw ? noWaRaw.replace(/\D/g, '') : '';
       // Format to 62 prefix (Indonesia)
       const noWa = digits.startsWith('62') ? digits : (digits.startsWith('0') ? '62' + digits.substring(1) : (digits ? '62' + digits : ''));
 
       let guruDisplay = guru;
-      if (digits) {
+      if (digits && noWa) {
         let jadwalInfo = isKamis ? " (Jadwal Khusus Hari Kamis)" : "";
 
-        const pesan = `📢 *Assalamualaikum Wr. Wb.*
+        const pesan = `Assalamualaikum Wr. Wb.
 
-📝 Mohon izin untuk menginformasikan bahwa *Ust. ${guru}* pada hari ini memiliki jadwal mengajar di *kelas ${kelas}* untuk mapel *${mapel}* pada *Jam ke-${jamKeNow}*${jadwalInfo}.
+Mohon izin untuk menginformasikan bahwa Ust. ${guru} pada hari ini memiliki jadwal mengajar di kelas ${kelas} untuk mapel ${mapel} pada Jam ke-${jamKeNow}${jadwalInfo}.
         
-🙏🏻 Atas perhatian dan kerjasamanya diucapkan terima kasih.
+Atas perhatian dan kerjasamanya diucapkan terima kasih.
         
-📢 *Wassalamu'alaikum Wr. Wb.*`;
+Wassalamu'alaikum Wr. Wb.`;
 
         const urlWa = `https://wa.me/${noWa}?text=${encodeURIComponent(pesan)}`;
         guruDisplay = `<a href="${urlWa}" target="_blank" class="guru-link">${guru}</a>`;
-        console.log(`${guru}: ${noWaRaw} → ${noWa} → ${urlWa}`);
       }
 
       const tr = document.createElement("tr");
