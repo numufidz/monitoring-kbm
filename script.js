@@ -1,10 +1,16 @@
 const spreadsheetID = '1LgqAr0L66JLtygqTqZRXOMKT06_IMopYlsEGc5nVp4I';
-const sheetDatabase = 'DATABASE';
+
+// v2.0: DB_ASC (WIDE format) + DB_GURU_MAPEL (master guru data) + KELAS_SHIFT (mapping)
+const sheetDbAsc = 'DB_ASC';
+const sheetDbGuruMapel = 'DB_GURU_MAPEL';
+const sheetKelasShift = 'KELAS_SHIFT';
 const sheetBel = 'PERIODE BEL';
 const sheetBelKhusus = 'BEL KHUSUS';
 const sheetPiket = 'PIKET';
 
-const endpointDatabase = `https://opensheet.elk.sh/${spreadsheetID}/${sheetDatabase}`;
+const endpointDbAsc = `https://opensheet.elk.sh/${spreadsheetID}/${sheetDbAsc}`;
+const endpointDbGuruMapel = `https://opensheet.elk.sh/${spreadsheetID}/${sheetDbGuruMapel}`;
+const endpointKelasShift = `https://opensheet.elk.sh/${spreadsheetID}/${sheetKelasShift}`;
 const endpointBel = `https://opensheet.elk.sh/${spreadsheetID}/${sheetBel}`;
 const endpointBelKhusus = `https://opensheet.elk.sh/${spreadsheetID}/${sheetBelKhusus}`;
 const endpointPiket = `https://opensheet.elk.sh/${spreadsheetID}/${sheetPiket}`;
@@ -19,6 +25,13 @@ const guruPiket = document.getElementById("guruPiket");
 let timeOffset = 0;
 let dayOffset = 0;
 let currentScheduleData = [];
+
+// v2.0: New data structures
+let globalDbAscData = null;
+let globalDbGuruMapelData = null;
+let globalKelasShiftData = null;
+let globalKelasShiftMap = null;
+let globalGuruLookupMap = null;
 
 const themes = [
   // Deep Ocean Blue - menenangkan dan profesional
@@ -57,6 +70,93 @@ function nextTheme() {
 
 // Apply initial random theme
 nextTheme();
+
+/**
+ * Build guru lookup map dari DB_GURU_MAPEL
+ * Maps KODE_DB_ASC → {nama_guru, mapel}
+ */
+function createGuruLookupMap(dbGuruMapelData) {
+  const map = new Map();
+  if (!dbGuruMapelData || !Array.isArray(dbGuruMapelData)) return map;
+  
+  dbGuruMapelData.forEach(row => {
+    const kode = row['KODE_DB_ASC'];
+    if (kode && kode.trim()) {
+      map.set(kode.trim(), {
+        nama_guru: row['NAMA GURU'] || '',
+        mapel: row['MAPEL_LONG'] || row['MAPEL_SHORT'] || ''
+      });
+    }
+  });
+  
+  return map;
+}
+
+/**
+ * Build kelas to shift mapping dari KELAS_SHIFT sheet
+ * Maps Kelas (e.g., "7A") → Shift (e.g., "PUTRA")
+ */
+function createKelasShiftMap(kelasShiftData) {
+  const map = new Map();
+  if (!kelasShiftData || !Array.isArray(kelasShiftData)) return map;
+  
+  kelasShiftData.forEach(row => {
+    const kelas = row['KELAS'];
+    const shift = row['SHIFT'];
+    if (kelas && shift) {
+      map.set(kelas.trim(), shift.trim());
+    }
+  });
+  
+  return map;
+}
+
+/**
+ * Transform DB_ASC WIDE format → LONG format
+ * WIDE: {HARI: "SABTU", "Jam Ke-": "1", "7A": "BAR.23", "7B": "ASW.37", ..., "7D": "THI.40", ...}
+ * LONG: [{Hari: "SABTU", "Jam Ke-": "1", Shift: "PUTRA", Kelas: "7A", KODE_DB_ASC: "BAR.23", nama_guru: "...", mapel: "..."}, ...]
+ */
+function transformDbAscWideToLong(dbAscWideData, guruLookupMap, kelasShiftMap) {
+  if (!dbAscWideData || !Array.isArray(dbAscWideData)) return [];
+  
+  const result = [];
+  
+  // Get all class keys from kelasShiftMap (dynamic from KELAS_SHIFT sheet)
+  const allClasses = Array.from(kelasShiftMap.keys()).sort();
+  
+  // Process each row
+  dbAscWideData.forEach((row) => {
+    const hari = row['HARI'];
+    const jamKe = row['Jam Ke-'];
+    
+    // Skip rows without HARI or Jam Ke-
+    if (!hari || !jamKe) return;
+    
+    // Process each class column
+    allClasses.forEach(kelas => {
+      const kode = row[kelas];
+      
+      // Skip empty codes
+      if (!kode || !kode.trim()) return;
+      
+      const kodeTrim = kode.trim();
+      const guruInfo = guruLookupMap.get(kodeTrim) || { nama_guru: '', mapel: '' };
+      const shift = kelasShiftMap.get(kelas) || 'UNKNOWN';
+      
+      result.push({
+        Hari: hari,
+        'Jam Ke-': jamKe.toString(),
+        Shift: shift,
+        Kelas: kelas,
+        KODE_DB_ASC: kodeTrim,
+        'Nama Mapel': guruInfo.mapel,
+        'Nama Lengkap Guru': guruInfo.nama_guru
+      });
+    });
+  });
+  
+  return result;
+}
 
 function updateClock() {
   const now = new Date();
@@ -143,11 +243,24 @@ async function fetchData() {
   const isKamis = hari === 'KAMIS';
 
   try {
-    const [dataJadwal, dataBel, dataBelKhusus] = await Promise.all([
-      fetch(endpointDatabase).then(r => r.json()),
+    console.log("Fetching data v2.0 (DB_ASC + DB_GURU_MAPEL + KELAS_SHIFT)...");
+    const [dataDbAsc, dataDbGuruMapel, dataKelasShift, dataBel, dataBelKhusus] = await Promise.all([
+      fetch(endpointDbAsc).then(r => r.json()),
+      fetch(endpointDbGuruMapel).then(r => r.json()),
+      fetch(endpointKelasShift).then(r => r.json()),
       fetch(endpointBel).then(r => r.json()),
       fetch(endpointBelKhusus).then(r => r.json())
     ]);
+
+    // Store raw data in globals
+    globalDbAscData = dataDbAsc;
+    globalDbGuruMapelData = dataDbGuruMapel;
+    globalKelasShiftData = dataKelasShift;
+    
+    // Transform WIDE format → LONG format dan join dengan guru info
+    globalGuruLookupMap = createGuruLookupMap(dataDbGuruMapel);
+    globalKelasShiftMap = createKelasShiftMap(dataKelasShift);
+    const dataJadwal = transformDbAscWideToLong(dataDbAsc, globalGuruLookupMap, globalKelasShiftMap);
 
     const belData = isKamis ? dataBelKhusus : dataBel;
 
