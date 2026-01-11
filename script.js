@@ -88,13 +88,13 @@ function openWhatsApp(element) {
 function createGuruLookupMap(dbGuruMapelData) {
   const map = new Map();
   if (!dbGuruMapelData || !Array.isArray(dbGuruMapelData)) return map;
-  
+
   dbGuruMapelData.forEach(row => {
     const kode = row['KODE_DB_ASC'];
     if (kode && kode.trim()) {
       // Try different column name variations
       const noWa = row['NO. WA'] || row['No. WA'] || row['NO WA'] || row['No WA'] || row['NO.WA'] || '';
-      
+
       map.set(kode.trim(), {
         nama_guru: row['NAMA GURU'] || '',
         mapel: row['MAPEL_LONG'] || row['MAPEL_SHORT'] || '',
@@ -102,7 +102,7 @@ function createGuruLookupMap(dbGuruMapelData) {
       });
     }
   });
-  
+
   return map;
 }
 
@@ -113,7 +113,7 @@ function createGuruLookupMap(dbGuruMapelData) {
 function createKelasShiftMap(kelasShiftData) {
   const map = new Map();
   if (!kelasShiftData || !Array.isArray(kelasShiftData)) return map;
-  
+
   kelasShiftData.forEach(row => {
     const kelas = row['KELAS'];
     const shift = row['SHIFT'];
@@ -121,7 +121,7 @@ function createKelasShiftMap(kelasShiftData) {
       map.set(kelas.trim(), shift.trim());
     }
   });
-  
+
   return map;
 }
 
@@ -132,31 +132,31 @@ function createKelasShiftMap(kelasShiftData) {
  */
 function transformDbAscWideToLong(dbAscWideData, guruLookupMap, kelasShiftMap) {
   if (!dbAscWideData || !Array.isArray(dbAscWideData)) return [];
-  
+
   const result = [];
-  
+
   // Get all class keys from kelasShiftMap (dynamic from KELAS_SHIFT sheet)
   const allClasses = Array.from(kelasShiftMap.keys()).sort();
-  
+
   // Process each row
   dbAscWideData.forEach((row) => {
     const hari = row['HARI'];
     const jamKe = row['Jam Ke-'];
-    
+
     // Skip rows without HARI or Jam Ke-
     if (!hari || !jamKe) return;
-    
+
     // Process each class column
     allClasses.forEach(kelas => {
       const kode = row[kelas];
-      
+
       // Skip empty codes
       if (!kode || !kode.trim()) return;
-      
+
       const kodeTrim = kode.trim();
       const guruInfo = guruLookupMap.get(kodeTrim) || { nama_guru: '', mapel: '', no_wa: '' };
       const shift = kelasShiftMap.get(kelas) || 'UNKNOWN';
-      
+
       result.push({
         Hari: hari,
         'Jam Ke-': jamKe.toString(),
@@ -169,7 +169,7 @@ function transformDbAscWideToLong(dbAscWideData, guruLookupMap, kelasShiftMap) {
       });
     });
   });
-  
+
   return result;
 }
 
@@ -271,7 +271,7 @@ async function fetchData() {
     globalDbAscData = dataDbAsc;
     globalDbGuruMapelData = dataDbGuruMapel;
     globalKelasShiftData = dataKelasShift;
-    
+
     // Transform WIDE format → LONG format dan join dengan guru info
     globalGuruLookupMap = createGuruLookupMap(dataDbGuruMapel);
     globalKelasShiftMap = createKelasShiftMap(dataKelasShift);
@@ -345,7 +345,7 @@ async function fetchData() {
       const mapel = row['Nama Mapel'];
       const guru = row['Nama Lengkap Guru'];
       const noWaRaw = row['NO. WA'] || row['No. WA'] || '';
-      
+
       // Extract digits only
       const digits = noWaRaw ? noWaRaw.replace(/\D/g, '') : '';
       // Format to 62 prefix (Indonesia)
@@ -458,6 +458,9 @@ function renderReportTable() {
             <input type="radio" name="status-${safeId}" value="⚠️"> ⚠️ Telat
           </label>
           <label class="status-label">
+            <input type="radio" name="status-${safeId}" value="ℹ️"> ℹ️ Izin
+          </label>
+          <label class="status-label">
             <input type="radio" name="status-${safeId}" value="⛔"> ⛔ Absen
           </label>
         </div>
@@ -493,13 +496,14 @@ function generateReportText() {
   if (currentScheduleData && currentScheduleData.length > 0) {
     currentScheduleData.forEach((row, index) => {
       const status = document.querySelector(`input[name="status-${index}"]:checked`).value;
-      report += `*${row.Kelas}* ${status} ${row['Nama Mapel']}\n`;
+      const kodeAngka = row.KODE_DB_ASC.replace(/\D/g, '');
+      report += `*${row.Kelas}* ${status} ${row['Nama Mapel']} _(${kodeAngka})_\n`;
     });
   } else {
     report += "Tidak ada jadwal aktif.\n";
   }
 
-  report += `\nKeterangan:\n✅ : Hadir\n⚠️ : Belum Datang\n⛔ : Absen\n`;
+  report += `\nKeterangan:\n✅ : Hadir\n⚠️ : Telat\nℹ️ : Izin\n⛔ : Absen\n`;
   report += `\nGuru Piket:\n${piketString}\n`;
   report += `\n*Link E-Jadwal*: monitoring-kbm.netlify.app/`;
 
