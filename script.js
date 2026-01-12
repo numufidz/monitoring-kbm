@@ -226,7 +226,7 @@ async function updateGuruPiket(hari, jam, isInKBMPeriod = false) {
     daftarPiketData.forEach(piket => {
       const div = document.createElement('div');
       if (piket.wa) {
-        div.innerHTML = `<a href="https://wa.me/${piket.wa}" target="_blank">${piket.nama}</a>`;
+        div.innerHTML = `<a href="https://api.whatsapp.com/send?phone=${piket.wa}">${piket.nama}</a>`;
       } else {
         div.textContent = piket.nama;
       }
@@ -363,7 +363,7 @@ async function fetchData() {
 
 📢 *Wassalamu'alaikum Wr. Wb.*`;
 
-        const urlWa = `https://wa.me/${noWa}?text=${encodeURIComponent(pesan)}`;
+        const urlWa = `https://api.whatsapp.com/send?phone=${noWa}&text=${encodeURIComponent(pesan)}`;
         guruDisplay = `<span class="guru-link" data-url="${urlWa}" onclick="openWhatsApp(this)">${guru}</span>`;
       }
 
