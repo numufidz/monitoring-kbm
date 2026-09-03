@@ -90,14 +90,14 @@ function createGuruLookupMap(dbGuruMapelData) {
   if (!dbGuruMapelData || !Array.isArray(dbGuruMapelData)) return map;
 
   dbGuruMapelData.forEach(row => {
-    // Key lookup menggunakan MAPEL_LONG (misal "BAR.23") agar cocok dengan nilai di DB_ASC
-    const kode = row['MAPEL_LONG'];
+    const kode = row['KODE_DB_ASC'];
     if (kode && kode.trim()) {
+      // Try different column name variations
       const noWa = row['NO. WA'] || row['No. WA'] || row['NO WA'] || row['No WA'] || row['NO.WA'] || '';
 
       map.set(kode.trim(), {
         nama_guru: row['NAMA GURU'] || '',
-        mapel: row['MAPEL_SHORT'] || row['MAPEL_LONG'] || '',
+        mapel: row['MAPEL_LONG'] || row['MAPEL_SHORT'] || '',
         no_wa: noWa
       });
     }
