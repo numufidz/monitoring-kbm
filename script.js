@@ -343,6 +343,8 @@ async function fetchData() {
     sortedJadwal.forEach((row, idx) => {
       const kelas = row.Kelas;
       const mapel = row['Nama Mapel'];
+      const kodeGuru = row.KODE_DB_ASC ? row.KODE_DB_ASC.replace(/\D/g, '') : '';
+      const mapelDisplay = kodeGuru ? `${mapel} (${kodeGuru})` : mapel;
       const guru = row['Nama Lengkap Guru'];
       const noWaRaw = row['NO. WA'] || row['No. WA'] || '';
 
@@ -370,7 +372,7 @@ async function fetchData() {
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${kelas}</td>
-        <td>${mapel}</td>
+        <td>${mapelDisplay}</td>
         <td><strong>${guruDisplay}</strong></td>
       `;
       dataTabel.appendChild(tr);
