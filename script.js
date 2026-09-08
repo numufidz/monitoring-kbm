@@ -60,15 +60,20 @@ const themes = [
   "linear-gradient(135deg, #0f4c75, #3282b8)"
 ];
 
-let currentTheme = Math.floor(Math.random() * themes.length);
+let currentTheme = (() => {
+  const saved = localStorage.getItem('kbm_theme');
+  return saved !== null ? parseInt(saved, 10) : Math.floor(Math.random() * themes.length);
+})();
+
 function nextTheme() {
   const theme = themes[currentTheme];
   document.documentElement.style.setProperty('--bg', theme);
   document.body.style.background = '';
+  localStorage.setItem('kbm_theme', currentTheme);
   currentTheme = (currentTheme + 1) % themes.length;
 }
 
-// Apply initial random theme
+// Apply saved or random theme on load
 nextTheme();
 
 /**
@@ -388,18 +393,56 @@ async function fetchData() {
 setInterval(fetchData, 15000);
 fetchData();
 
+const fonts = ['Roboto', 'Arial', 'Courier New', 'Verdana'];
+
+// Restore saved font on load
+(() => {
+  const savedFont = localStorage.getItem('kbm_font');
+  if (savedFont) document.body.style.fontFamily = savedFont;
+})();
+
 function toggleFont() {
-  const fonts = ['Roboto', 'Arial', 'Courier New', 'Verdana'];
   const body = document.body;
   let index = fonts.indexOf(body.style.fontFamily);
   index = (index + 1) % fonts.length;
   body.style.fontFamily = fonts[index];
+  localStorage.setItem('kbm_font', fonts[index]);
 }
 
-let currentFontSize = 0.85;
+let currentFontSize = (() => {
+  const saved = localStorage.getItem('kbm_fontSize');
+  return saved !== null ? parseFloat(saved) : 0.85;
+})();
+
+// Restore saved font size on load
+(() => {
+  const table = document.querySelector("table");
+  if (table) table.style.fontSize = `${currentFontSize}rem`;
+})();
+
 function adjustFont(change) {
   currentFontSize += change;
   document.querySelector("table").style.fontSize = `${currentFontSize}rem`;
+  localStorage.setItem('kbm_fontSize', currentFontSize);
+}
+
+function resetDefaults() {
+  // Hapus semua pengaturan dari localStorage
+  localStorage.removeItem('kbm_theme');
+  localStorage.removeItem('kbm_font');
+  localStorage.removeItem('kbm_fontSize');
+
+  // Reset tema ke random
+  currentTheme = Math.floor(Math.random() * themes.length);
+  nextTheme();
+
+  // Reset font ke default (Roboto)
+  document.body.style.fontFamily = '';
+
+  // Reset ukuran font tabel ke default (0.85rem)
+  currentFontSize = 0.85;
+  const table = document.querySelector("table");
+  if (table) table.style.fontSize = `${currentFontSize}rem`;
 }
 
 function adjustTime(offset) {
