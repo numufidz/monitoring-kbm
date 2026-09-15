@@ -1,6 +1,6 @@
 // Service Worker — E-Jadwal KBM MTs. An-Nur Bululawang
 // Versi cache: update angka ini setiap kali ada perubahan file
-const CACHE_NAME = 'ejadwal-kbm-v1';
+const CACHE_NAME = 'ejadwal-kbm-v2';
 
 // Aset statis yang di-cache saat SW pertama diinstall
 const STATIC_ASSETS = [
@@ -42,20 +42,16 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// ─── Fetch: strategi Cache First untuk aset, Network First untuk API ─────────
+// ─── Fetch: Cache First untuk aset lokal SAJA ────────────────────────────────
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Biarkan request ke API eksternal (opensheet.elk.sh, whatsapp, dll.) lewat tanpa intercept
-  // SW hanya menangani aset statis dari origin sendiri
+  // PENTING: Jangan intercept request ke API eksternal sama sekali.
+  // Biarkan browser handle sendiri secara natural.
+  // Jika offline, fetch() akan throw NetworkError → catch di script.js
+  // akan membaca data dari localStorage cache.
   if (url.origin !== self.location.origin) {
-    // Untuk API request: coba network, tidak ada fallback (handled di script.js)
-    event.respondWith(fetch(event.request).catch(() => {
-      return new Response(JSON.stringify([]), {
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }));
-    return;
+    return; // Tidak di-intercept, browser handle sendiri
   }
 
   // Untuk aset lokal: Cache First → fallback ke network
