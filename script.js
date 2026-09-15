@@ -578,6 +578,16 @@ const btnWa = document.querySelector('.btn-wa');
 function openReportModal() {
   reportModal.style.display = 'flex';
   btnWa.disabled = true;
+
+  // Isi info waktu di modal
+  const timeInfoEl = document.getElementById('reportTimeInfo');
+  if (timeInfoEl) {
+    const dateText = dayDate.textContent || '';
+    const shiftText = shiftKBM.textContent || '';
+    const jamText = jamKBM.textContent || '';
+    timeInfoEl.textContent = `${dateText} | ${shiftText} | ${jamText}`;
+  }
+
   renderReportTable();
 }
 

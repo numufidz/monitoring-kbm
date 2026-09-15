@@ -545,6 +545,19 @@
       transition: opacity 0.2s;
     }
 
+    /* Info waktu di modal laporan */
+    #reportTimeInfo {
+      font-size: 0.8rem;
+      color: #00BFFF;
+      background: rgba(0, 191, 255, 0.08);
+      border: 1px solid rgba(0, 191, 255, 0.2);
+      border-radius: 6px;
+      padding: 6px 12px;
+      margin-bottom: 14px;
+      text-align: center;
+      line-height: 1.5;
+    }
+
     .btn-copy {
       background: #444;
       color: white;
@@ -697,11 +710,14 @@
       </div>
 
       <div class="modal-body">
+        <!-- Info waktu laporan -->
+        <div id="reportTimeInfo">Memuat info waktu...</div>
+
         <table class="report-table">
           <thead>
             <tr>
               <th>Kelas</th>
-              <th>Mapel & Status</th>
+              <th>Mapel &amp; Status</th>
             </tr>
           </thead>
           <tbody id="reportTableBody">
