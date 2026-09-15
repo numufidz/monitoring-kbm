@@ -15,6 +15,75 @@ const endpointBel = `https://opensheet.elk.sh/${spreadsheetID}/${sheetBel}`;
 const endpointBelKhusus = `https://opensheet.elk.sh/${spreadsheetID}/${sheetBelKhusus}`;
 const endpointPiket = `https://opensheet.elk.sh/${spreadsheetID}/${sheetPiket}`;
 
+// ─── Cache Offline — Konfigurasi ─────────────────────────────────────────────
+const CACHE_KEY_DB_ASC       = 'kbm_cache_db_asc';
+const CACHE_KEY_GURU_MAPEL   = 'kbm_cache_guru_mapel';
+const CACHE_KEY_KELAS_SHIFT  = 'kbm_cache_kelas_shift';
+const CACHE_KEY_BEL          = 'kbm_cache_bel';
+const CACHE_KEY_BEL_KHUSUS   = 'kbm_cache_bel_khusus';
+const CACHE_KEY_PIKET        = 'kbm_cache_piket';
+const CACHE_KEY_TIMESTAMP    = 'kbm_cache_timestamp';
+const CACHE_EXPIRY_HOURS     = 24; // Data cache berlaku 24 jam
+
+/**
+ * Simpan data JSON ke localStorage dengan key tertentu
+ */
+function saveCache(key, data) {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (e) {
+    console.warn('[Cache] Gagal menyimpan cache:', key, e);
+  }
+}
+
+/**
+ * Baca data JSON dari localStorage
+ */
+function loadCache(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    console.warn('[Cache] Gagal membaca cache:', key, e);
+    return null;
+  }
+}
+
+/**
+ * Cek apakah cache masih valid (belum kadaluarsa)
+ */
+function isCacheValid() {
+  const ts = localStorage.getItem(CACHE_KEY_TIMESTAMP);
+  if (!ts) return false;
+  const ageMs = Date.now() - parseInt(ts, 10);
+  return ageMs < CACHE_EXPIRY_HOURS * 60 * 60 * 1000;
+}
+
+/**
+ * Perbarui indikator status koneksi di UI
+ * @param {'online'|'offline'|'loading'} status
+ */
+function updateConnectionStatus(status) {
+  const el = document.getElementById('connectionStatus');
+  if (!el) return;
+  const ts = localStorage.getItem(CACHE_KEY_TIMESTAMP);
+  let timeStr = '';
+  if (ts) {
+    const d = new Date(parseInt(ts, 10));
+    timeStr = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  }
+  if (status === 'online') {
+    el.innerHTML = '🟢 <span>Data real-time</span>';
+    el.className = 'status-online';
+  } else if (status === 'offline') {
+    el.innerHTML = `🟡 <span>Data dari cache${timeStr ? ' (diperbarui ' + timeStr + ')' : ''}</span>`;
+    el.className = 'status-offline';
+  } else {
+    el.innerHTML = '⚪ <span>Memuat data...</span>';
+    el.className = 'status-loading';
+  }
+}
+
 const clock = document.getElementById("clock");
 const dayDate = document.getElementById("dayDate");
 const shiftKBM = document.getElementById("shiftKBM");
@@ -195,14 +264,20 @@ function updateClock() {
 setInterval(updateClock, 1000);
 updateClock();
 
-async function updateGuruPiket(hari, jam, isInKBMPeriod = false) {
+async function updateGuruPiket(hari, jam, isInKBMPeriod = false, cachedPiketData = null) {
   try {
     if (!isInKBMPeriod) {
       guruPiket.textContent = 'Tidak ada data piket';
       return;
     }
 
-    const dataPiket = await fetch(endpointPiket).then(r => r.json());
+    // Gunakan data yang sudah di-cache dari fetchData() jika tersedia
+    const dataPiket = cachedPiketData;
+
+    if (!dataPiket || !Array.isArray(dataPiket) || dataPiket.length === 0) {
+      guruPiket.textContent = 'Tidak ada data piket';
+      return;
+    }
 
     const shift = jam < 12 ? 'PAGI' : 'SIANG';
     const shiftColumn = shift === 'PAGI' ? 'PIKET SHIFT PAGI' : 'PIKET SHIFT SIANG';
@@ -244,6 +319,123 @@ async function updateGuruPiket(hari, jam, isInKBMPeriod = false) {
   }
 }
 
+/**
+ * Render jadwal ke tabel dari data array yang diberikan
+ */
+function renderJadwal(sortedJadwal, jamKeNow, isKamis) {
+  dataTabel.innerHTML = "";
+  sortedJadwal.forEach((row) => {
+    const kelas = row.Kelas;
+    const mapel = row['Nama Mapel'];
+    const kodeGuru = row.KODE_DB_ASC ? row.KODE_DB_ASC.replace(/\D/g, '') : '';
+    const mapelDisplay = kodeGuru ? `${mapel} (${kodeGuru})` : mapel;
+    const guru = row['Nama Lengkap Guru'];
+    const noWaRaw = row['NO. WA'] || row['No. WA'] || '';
+
+    const digits = noWaRaw ? noWaRaw.replace(/\D/g, '') : '';
+    const noWa = digits.startsWith('62') ? digits : (digits.startsWith('0') ? '62' + digits.substring(1) : (digits ? '62' + digits : ''));
+
+    let guruDisplay = guru;
+    if (digits && noWa) {
+      let jadwalInfo = isKamis ? " (Jadwal Khusus Hari Kamis)" : "";
+      const pesan = `📢 *Assalamualaikum Wr. Wb.*
+
+📝 Mohon izin untuk menginformasikan bahwa *Ust. ${guru}* pada hari ini memiliki jadwal mengajar di *kelas ${kelas}* untuk mapel *${mapel}* pada *Jam ke-${jamKeNow}*${jadwalInfo}.
+
+🙏🏻 Atas perhatian dan kerjasamanya diucapkan terima kasih.
+
+📢 *Wassalamu'alaikum Wr. Wb.*`;
+      const urlWa = `https://api.whatsapp.com/send?phone=${noWa}&text=${encodeURIComponent(pesan)}`;
+      guruDisplay = `<span class="guru-link" data-url="${urlWa}" onclick="openWhatsApp(this)">${guru}</span>`;
+    }
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${kelas}</td>
+      <td>${mapelDisplay}</td>
+      <td><strong>${guruDisplay}</strong></td>
+    `;
+    dataTabel.appendChild(tr);
+  });
+}
+
+/**
+ * Proses dan tampilkan data dari sumber manapun (online/offline)
+ */
+function processAndDisplay(dataDbAsc, dataDbGuruMapel, dataKelasShift, dataBel, dataBelKhusus, dataPiket, hari, jam, shift, timeNow, isKamis) {
+  // Store raw data in globals
+  globalDbAscData = dataDbAsc;
+  globalDbGuruMapelData = dataDbGuruMapel;
+  globalKelasShiftData = dataKelasShift;
+
+  globalGuruLookupMap = createGuruLookupMap(dataDbGuruMapel);
+  globalKelasShiftMap = createKelasShiftMap(dataKelasShift);
+  const dataJadwal = transformDbAscWideToLong(dataDbAsc, globalGuruLookupMap, globalKelasShiftMap);
+
+  const belData = isKamis ? dataBelKhusus : dataBel;
+  const jadwalShift = belData.filter(p => p.Shift === shift);
+  let periodeSekarang = null;
+
+  for (let p of jadwalShift) {
+    if (timeNow >= p['Jam Mulai'] && timeNow <= p['Jam Selesai']) {
+      periodeSekarang = p;
+      break;
+    }
+  }
+
+  const isInKBMPeriod = periodeSekarang && periodeSekarang['Jam Ke-'] !== 'IST';
+
+  // Panggil updateGuruPiket dengan data yang sudah ada (tidak fetch lagi)
+  updateGuruPiket(hari, jam, isInKBMPeriod, dataPiket);
+
+  shiftKBM.textContent = `Jadwal KBM ${shift}`;
+
+  if (!periodeSekarang) {
+    jamKBM.textContent = `Di luar jam KBM`;
+    dataTabel.innerHTML = `<tr><td colspan="3">Tidak ada KBM saat ini</td></tr>`;
+    currentScheduleData = [];
+    return;
+  }
+
+  if (periodeSekarang['Jam Ke-'] === 'IST') {
+    jamKBM.textContent = `Jam ISTIRAHAT`;
+    dataTabel.innerHTML = `<tr><td colspan="3">Sedang istirahat</td></tr>`;
+    currentScheduleData = [];
+    return;
+  }
+
+  const jamKeNow = periodeSekarang['Jam Ke-'];
+  const jamMulai = periodeSekarang['Jam Mulai'];
+  const jamSelesai = periodeSekarang['Jam Selesai'];
+
+  jamKBM.textContent = `Jam ke-${jamKeNow} (${jamMulai} - ${jamSelesai})`;
+
+  const jadwalSekarang = dataJadwal.filter(row =>
+    row.Hari.toUpperCase() === hari &&
+    row['Jam Ke-'] === jamKeNow &&
+    row.Shift === shift
+  );
+
+  if (jadwalSekarang.length === 0) {
+    dataTabel.innerHTML = `<tr><td colspan="3">Tidak ada data jadwal untuk jam ini</td></tr>`;
+    currentScheduleData = [];
+    return;
+  }
+
+  const sortedJadwal = jadwalSekarang.sort((a, b) => {
+    const regex = /^(\d+)([A-Z]*)$/i;
+    const [, levelA, subA] = a.Kelas.match(regex) || [null, 0, ""];
+    const [, levelB, subB] = b.Kelas.match(regex) || [null, 0, ""];
+    const numA = parseInt(levelA);
+    const numB = parseInt(levelB);
+    if (numA !== numB) return numA - numB;
+    return subA.localeCompare(subB);
+  });
+
+  currentScheduleData = sortedJadwal;
+  renderJadwal(sortedJadwal, jamKeNow, isKamis);
+}
+
 async function fetchData() {
   const now = new Date();
   now.setHours(now.getHours() + timeOffset);
@@ -252,141 +444,61 @@ async function fetchData() {
   const menit = now.getMinutes();
 
   let hari = now.toLocaleDateString('id-ID', { weekday: 'long' }).toUpperCase();
-
-  if (hari === 'MINGGU') {
-    hari = 'AHAD';
-  }
+  if (hari === 'MINGGU') hari = 'AHAD';
 
   const shift = jam < 12 ? 'PUTRA' : 'PUTRI';
   const timeNow = `${jam.toString().padStart(2, '0')}:${menit.toString().padStart(2, '0')}`;
-
   const isKamis = hari === 'KAMIS';
 
+  updateConnectionStatus('loading');
+
   try {
-    console.log("Fetching data v2.0 (DB_ASC + DB_GURU_MAPEL + KELAS_SHIFT)...");
-    const [dataDbAsc, dataDbGuruMapel, dataKelasShift, dataBel, dataBelKhusus] = await Promise.all([
+    console.log("[Online] Fetching data v2.0 dari server...");
+
+    const [dataDbAsc, dataDbGuruMapel, dataKelasShift, dataBel, dataBelKhusus, dataPiket] = await Promise.all([
       fetch(endpointDbAsc).then(r => r.json()),
       fetch(endpointDbGuruMapel).then(r => r.json()),
       fetch(endpointKelasShift).then(r => r.json()),
       fetch(endpointBel).then(r => r.json()),
-      fetch(endpointBelKhusus).then(r => r.json())
+      fetch(endpointBelKhusus).then(r => r.json()),
+      fetch(endpointPiket).then(r => r.json())
     ]);
 
-    // Store raw data in globals
-    globalDbAscData = dataDbAsc;
-    globalDbGuruMapelData = dataDbGuruMapel;
-    globalKelasShiftData = dataKelasShift;
+    // Simpan semua data ke localStorage sebagai cache offline
+    saveCache(CACHE_KEY_DB_ASC, dataDbAsc);
+    saveCache(CACHE_KEY_GURU_MAPEL, dataDbGuruMapel);
+    saveCache(CACHE_KEY_KELAS_SHIFT, dataKelasShift);
+    saveCache(CACHE_KEY_BEL, dataBel);
+    saveCache(CACHE_KEY_BEL_KHUSUS, dataBelKhusus);
+    saveCache(CACHE_KEY_PIKET, dataPiket);
+    localStorage.setItem(CACHE_KEY_TIMESTAMP, Date.now().toString());
 
-    // Transform WIDE format → LONG format dan join dengan guru info
-    globalGuruLookupMap = createGuruLookupMap(dataDbGuruMapel);
-    globalKelasShiftMap = createKelasShiftMap(dataKelasShift);
-    const dataJadwal = transformDbAscWideToLong(dataDbAsc, globalGuruLookupMap, globalKelasShiftMap);
-
-    const belData = isKamis ? dataBelKhusus : dataBel;
-
-    const jadwalShift = belData.filter(p => p.Shift === shift);
-    let periodeSekarang = null;
-
-    for (let p of jadwalShift) {
-      if (timeNow >= p['Jam Mulai'] && timeNow <= p['Jam Selesai']) {
-        periodeSekarang = p;
-        break;
-      }
-    }
-
-    const isInKBMPeriod = periodeSekarang && periodeSekarang['Jam Ke-'] !== 'IST';
-
-    await updateGuruPiket(hari, jam, isInKBMPeriod);
-
-    shiftKBM.textContent = `Jadwal KBM ${shift}`;
-
-    if (!periodeSekarang) {
-      jamKBM.textContent = `Di luar jam KBM`;
-      dataTabel.innerHTML = `<tr><td colspan="3">Tidak ada KBM saat ini</td></tr>`;
-      currentScheduleData = [];
-      return;
-    }
-
-    if (periodeSekarang['Jam Ke-'] === 'IST') {
-      jamKBM.textContent = `Jam ISTIRAHAT`;
-      dataTabel.innerHTML = `<tr><td colspan="3">Sedang istirahat</td></tr>`;
-      currentScheduleData = [];
-      return;
-    }
-
-    const jamKeNow = periodeSekarang['Jam Ke-'];
-    const jamMulai = periodeSekarang['Jam Mulai'];
-    const jamSelesai = periodeSekarang['Jam Selesai'];
-
-    jamKBM.textContent = `Jam ke-${jamKeNow} (${jamMulai} - ${jamSelesai})`;
-
-    const jadwalSekarang = dataJadwal.filter(row =>
-      row.Hari.toUpperCase() === hari &&
-      row['Jam Ke-'] === jamKeNow &&
-      row.Shift === shift
-    );
-
-    if (jadwalSekarang.length === 0) {
-      dataTabel.innerHTML = `<tr><td colspan="3">Tidak ada data jadwal untuk jam ini</td></tr>`;
-      currentScheduleData = [];
-      return;
-    }
-
-    const sortedJadwal = jadwalSekarang.sort((a, b) => {
-      const regex = /^(\d+)([A-Z]*)$/i;
-      const [, levelA, subA] = a.Kelas.match(regex) || [null, 0, ""];
-      const [, levelB, subB] = b.Kelas.match(regex) || [null, 0, ""];
-      const numA = parseInt(levelA);
-      const numB = parseInt(levelB);
-      if (numA !== numB) return numA - numB;
-      return subA.localeCompare(subB);
-    });
-
-    currentScheduleData = sortedJadwal;
-
-    dataTabel.innerHTML = "";
-    sortedJadwal.forEach((row, idx) => {
-      const kelas = row.Kelas;
-      const mapel = row['Nama Mapel'];
-      const kodeGuru = row.KODE_DB_ASC ? row.KODE_DB_ASC.replace(/\D/g, '') : '';
-      const mapelDisplay = kodeGuru ? `${mapel} (${kodeGuru})` : mapel;
-      const guru = row['Nama Lengkap Guru'];
-      const noWaRaw = row['NO. WA'] || row['No. WA'] || '';
-
-      // Extract digits only
-      const digits = noWaRaw ? noWaRaw.replace(/\D/g, '') : '';
-      // Format to 62 prefix (Indonesia)
-      const noWa = digits.startsWith('62') ? digits : (digits.startsWith('0') ? '62' + digits.substring(1) : (digits ? '62' + digits : ''));
-
-      let guruDisplay = guru;
-      if (digits && noWa) {
-        let jadwalInfo = isKamis ? " (Jadwal Khusus Hari Kamis)" : "";
-
-        const pesan = `📢 *Assalamualaikum Wr. Wb.*
-
-📝 Mohon izin untuk menginformasikan bahwa *Ust. ${guru}* pada hari ini memiliki jadwal mengajar di *kelas ${kelas}* untuk mapel *${mapel}* pada *Jam ke-${jamKeNow}*${jadwalInfo}.
-
-🙏🏻 Atas perhatian dan kerjasamanya diucapkan terima kasih.
-
-📢 *Wassalamu'alaikum Wr. Wb.*`;
-
-        const urlWa = `https://api.whatsapp.com/send?phone=${noWa}&text=${encodeURIComponent(pesan)}`;
-        guruDisplay = `<span class="guru-link" data-url="${urlWa}" onclick="openWhatsApp(this)">${guru}</span>`;
-      }
-
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${kelas}</td>
-        <td>${mapelDisplay}</td>
-        <td><strong>${guruDisplay}</strong></td>
-      `;
-      dataTabel.appendChild(tr);
-    });
+    updateConnectionStatus('online');
+    processAndDisplay(dataDbAsc, dataDbGuruMapel, dataKelasShift, dataBel, dataBelKhusus, dataPiket, hari, jam, shift, timeNow, isKamis);
 
   } catch (err) {
-    console.error("Gagal memuat:", err);
-    dataTabel.innerHTML = `<tr><td colspan="3">Gagal memuat data</td></tr>`;
-    guruPiket.textContent = 'Tidak ada data piket';
+    console.warn("[Offline] Fetch gagal, mencoba data cache:", err);
+
+    // Coba baca dari cache localStorage
+    const cachedDbAsc      = loadCache(CACHE_KEY_DB_ASC);
+    const cachedGuruMapel  = loadCache(CACHE_KEY_GURU_MAPEL);
+    const cachedKelasShift = loadCache(CACHE_KEY_KELAS_SHIFT);
+    const cachedBel        = loadCache(CACHE_KEY_BEL);
+    const cachedBelKhusus  = loadCache(CACHE_KEY_BEL_KHUSUS);
+    const cachedPiket      = loadCache(CACHE_KEY_PIKET);
+
+    const hasCacheData = cachedDbAsc && cachedGuruMapel && cachedKelasShift && cachedBel && cachedBelKhusus;
+
+    if (hasCacheData) {
+      console.log("[Offline] Menggunakan data cache.");
+      updateConnectionStatus('offline');
+      processAndDisplay(cachedDbAsc, cachedGuruMapel, cachedKelasShift, cachedBel, cachedBelKhusus, cachedPiket, hari, jam, shift, timeNow, isKamis);
+    } else {
+      console.error("[Offline] Tidak ada cache tersedia.");
+      updateConnectionStatus('offline');
+      dataTabel.innerHTML = `<tr><td colspan="3">⚠️ Tidak ada koneksi & belum ada cache data.<br>Hubungkan internet dan refresh halaman.</td></tr>`;
+      guruPiket.textContent = 'Tidak ada data';
+    }
   }
 }
 

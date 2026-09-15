@@ -153,6 +153,35 @@
       margin: 0;
     }
 
+    /* Status koneksi / cache indicator */
+    #connectionStatus {
+      font-size: 0.72rem;
+      font-weight: bold;
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-top: 2px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.4s ease;
+      letter-spacing: 0.3px;
+    }
+    #connectionStatus.status-online {
+      background: rgba(0, 200, 100, 0.15);
+      color: #00e676;
+      border: 1px solid rgba(0, 200, 100, 0.3);
+    }
+    #connectionStatus.status-offline {
+      background: rgba(255, 200, 0, 0.15);
+      color: #FFD700;
+      border: 1px solid rgba(255, 200, 0, 0.3);
+    }
+    #connectionStatus.status-loading {
+      background: rgba(180, 180, 180, 0.1);
+      color: #aaa;
+      border: 1px solid rgba(180,180,180,0.2);
+    }
+
     /* Container untuk kolom transparan */
     .info-columns {
       display: flex;
@@ -593,6 +622,7 @@
 
     <div id="infoHeader">
       <div id="clock">--:--:--</div>
+      <div id="connectionStatus" class="status-loading">⚪ <span>Memuat data...</span></div>
     </div>
 
     <!-- Kolom transparan untuk info KBM dan guru piket -->
@@ -688,6 +718,17 @@
   </div>
 
   <script src="script.js"></script>
+
+  <!-- Registrasi Service Worker untuk dukungan offline -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('[SW] Registered:', reg.scope))
+          .catch(err => console.warn('[SW] Gagal mendaftar:', err));
+      });
+    }
+  </script>
 </body>
 
 </html>
