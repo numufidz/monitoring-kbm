@@ -367,6 +367,9 @@ function processAndDisplay(dataDbAsc, dataDbGuruMapel, dataKelasShift, dataBel, 
   globalDbAscData = dataDbAsc;
   globalDbGuruMapelData = dataDbGuruMapel;
   globalKelasShiftData = dataKelasShift;
+  // Simpan data bel untuk fitur jadwal guru
+  globalBelData = dataBel;
+  globalBelKhususData = dataBelKhusus;
 
   globalGuruLookupMap = createGuruLookupMap(dataDbGuruMapel);
   globalKelasShiftMap = createKelasShiftMap(dataKelasShift);
@@ -699,4 +702,536 @@ async function sendToWhatsApp() {
     alert('Gagal menyalin teks laporan. Namun akan tetap membuka WhatsApp.');
     window.open('https://chat.whatsapp.com/5vTwMCXv9ZY6pBA0aDIGB2', '_blank');
   }
+}
+
+// ============================================================
+// FITUR JADWAL GURU — Canvas / Wallpaper HP (Portrait)
+// ============================================================
+
+const HARI_LIST = ['SABTU', 'AHAD', 'SENIN', 'SELASA', 'RABU', 'KAMIS'];
+const HARI_SHORT = { SABTU: 'Sbt', AHAD: 'Ahd', SENIN: 'Sen', SELASA: 'Sel', RABU: 'Rab', KAMIS: 'Kam' };
+
+// Jam bel shift PAGI (1-7) dan SIANG (1-7) — diisi dari data global saat render
+// Fallback jika data bel belum ada
+const DEFAULT_BEL_PAGI = [
+  { jam: '1', mulai: '06:45', selesai: '07:25' },
+  { jam: '2', mulai: '07:25', selesai: '08:05' },
+  { jam: '3', mulai: '08:05', selesai: '08:45' },
+  { jam: '4', mulai: '08:45', selesai: '09:25' },
+  { jam: '5', mulai: '09:45', selesai: '10:25' },
+  { jam: '6', mulai: '10:25', selesai: '10:55' },
+  { jam: '7', mulai: '10:55', selesai: '11:30' },
+];
+const DEFAULT_BEL_SIANG = [
+  { jam: '1', mulai: '12:30', selesai: '13:05' },
+  { jam: '2', mulai: '13:05', selesai: '13:40' },
+  { jam: '3', mulai: '13:40', selesai: '14:15' },
+  { jam: '4', mulai: '14:15', selesai: '14:50' },
+  { jam: '5', mulai: '14:50', selesai: '15:25' },
+  { jam: '6', mulai: '15:25', selesai: '16:00' },
+  { jam: '7', mulai: '16:00', selesai: '16:35' },
+];
+
+// Simpan data bel dari fetch
+let globalBelData = null;
+let globalBelKhususData = null;
+
+/**
+ * Ambil periode bel pagi & siang dari dataBel (PERIODE BEL)
+ * Return { pagi: [{jam, mulai, selesai}], siang: [...] }
+ */
+function parseBelPeriods(dataBel) {
+  if (!dataBel || !Array.isArray(dataBel) || dataBel.length === 0) {
+    return { pagi: DEFAULT_BEL_PAGI, siang: DEFAULT_BEL_SIANG };
+  }
+  const pagi = [];
+  const siang = [];
+  dataBel.forEach(row => {
+    const shift = (row['Shift'] || row['SHIFT'] || '').toUpperCase();
+    const jamKe = (row['Jam Ke-'] || row['JAM KE-'] || '').toString().trim();
+    const mulai = row['Jam Mulai'] || row['JAM MULAI'] || '';
+    const selesai = row['Jam Selesai'] || row['JAM SELESAI'] || '';
+    if (!jamKe || jamKe === 'IST' || !mulai || !selesai) return;
+    const entry = { jam: jamKe, mulai, selesai };
+    if (shift === 'PUTRA') pagi.push(entry);
+    else if (shift === 'PUTRI') siang.push(entry);
+  });
+  return {
+    pagi: pagi.length > 0 ? pagi : DEFAULT_BEL_PAGI,
+    siang: siang.length > 0 ? siang : DEFAULT_BEL_SIANG
+  };
+}
+
+/**
+ * Populate dropdown guru — deduplikasi per NAMA GURU (bukan per kode)
+ */
+function populateGuruDropdown() {
+  const select = document.getElementById('guruSelect');
+  if (!select) return;
+  select.innerHTML = '<option value="">-- Pilih Guru --</option>';
+
+  if (!globalGuruLookupMap || globalGuruLookupMap.size === 0) {
+    select.innerHTML += '<option disabled>Data guru belum tersedia</option>';
+    return;
+  }
+
+  // Kumpulkan guru unik berdasarkan NAMA (bukan kode), gabungkan semua mapelnya
+  const guruMap = new Map(); // nama_guru → Set<mapel>
+  globalGuruLookupMap.forEach((info) => {
+    const nama = (info.nama_guru || '').trim();
+    if (!nama) return;
+    if (!guruMap.has(nama)) guruMap.set(nama, new Set());
+    if (info.mapel && info.mapel.trim()) guruMap.get(nama).add(info.mapel.trim());
+  });
+
+  // Sort A-Z lalu masukkan ke dropdown
+  const sortedNames = Array.from(guruMap.keys()).sort((a, b) => a.localeCompare(b, 'id'));
+  sortedNames.forEach(nama => {
+    const opt = document.createElement('option');
+    opt.value = nama; // value = nama guru (bukan kode)
+    opt.textContent = nama;
+    select.appendChild(opt);
+  });
+}
+
+/**
+ * Buka modal jadwal guru
+ */
+function openJadwalGuruModal() {
+  const modal = document.getElementById('jadwalGuruModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  populateGuruDropdown();
+  // Reset canvas
+  document.getElementById('jadwalGuruCanvasWrap').style.display = 'none';
+  document.getElementById('btnDownloadJadwalGuru').disabled = true;
+}
+
+function closeJadwalGuruModal() {
+  const modal = document.getElementById('jadwalGuruModal');
+  if (modal) modal.style.display = 'none';
+}
+
+document.getElementById('jadwalGuruModal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('jadwalGuruModal')) closeJadwalGuruModal();
+});
+
+/**
+ * Dapatkan jadwal seorang guru berdasarkan NAMA GURU (bukan kode)
+ * Mencakup SEMUA kode yang dimiliki guru tersebut (multi-mapel)
+ * Return: { [HARI]: { PUTRA: { [jamKe]: [{kelas, mapel}] }, PUTRI: { [jamKe]: [{kelas, mapel}] } } }
+ */
+function getJadwalGuru(namaGuru) {
+  if (!globalDbAscData || !globalKelasShiftMap || !globalGuruLookupMap) return null;
+
+  // Kumpulkan semua KODE milik guru ini (bisa lebih dari 1 jika multi-mapel)
+  const kodeGuruMap = new Map(); // kode → mapel
+  globalGuruLookupMap.forEach((info, kode) => {
+    if ((info.nama_guru || '').trim() === namaGuru.trim()) {
+      kodeGuruMap.set(kode, info.mapel || '');
+    }
+  });
+
+  // Inisialisasi struktur jadwal
+  const jadwal = {};
+  HARI_LIST.forEach(h => { jadwal[h] = { PUTRA: {}, PUTRI: {} }; });
+
+  const allClasses = Array.from(globalKelasShiftMap.keys());
+
+  globalDbAscData.forEach(row => {
+    const hari  = (row['HARI'] || '').toUpperCase().trim();
+    const jamKe = (row['Jam Ke-'] || '').toString().trim();
+    if (!hari || !jamKe) return;
+    const hariKey = hari === 'MINGGU' ? 'AHAD' : hari;
+    if (!HARI_LIST.includes(hariKey)) return;
+
+    allClasses.forEach(kelas => {
+      const kode = (row[kelas] || '').trim();
+      if (!kodeGuruMap.has(kode)) return;
+
+      const shift    = globalKelasShiftMap.get(kelas) || 'PUTRA';
+      const shiftKey = shift === 'PUTRI' ? 'PUTRI' : 'PUTRA';
+      const mapel    = kodeGuruMap.get(kode);
+
+      if (!jadwal[hariKey][shiftKey][jamKe]) jadwal[hariKey][shiftKey][jamKe] = [];
+      jadwal[hariKey][shiftKey][jamKe].push({ kelas, mapel });
+    });
+  });
+
+  return jadwal;
+}
+
+/**
+ * Render jadwal guru ke canvas ukuran 1080×1920 (portrait wallpaper HP)
+ */
+function renderJadwalGuruCanvas() {
+  const select    = document.getElementById('guruSelect');
+  const namaGuru  = select ? select.value : '';  // value sekarang = nama guru
+  const canvasWrap = document.getElementById('jadwalGuruCanvasWrap');
+  const loading   = document.getElementById('jadwalGuruLoading');
+  const btnDl     = document.getElementById('btnDownloadJadwalGuru');
+
+  if (!namaGuru) {
+    canvasWrap.style.display = 'none';
+    btnDl.disabled = true;
+    return;
+  }
+
+  loading.style.display = 'block';
+  canvasWrap.style.display = 'none';
+  btnDl.disabled = true;
+
+  // Render async agar UI tidak freeze
+  setTimeout(() => {
+    _drawJadwalGuruCanvas(namaGuru)
+      .then(() => {
+        canvasWrap.style.display = 'flex';
+        btnDl.disabled = false;
+      })
+      .catch(e => {
+        console.error('Gagal render canvas jadwal guru:', e);
+        alert('Gagal membuat jadwal. Pastikan data sudah dimuat.');
+      })
+      .finally(() => {
+        loading.style.display = 'none';
+      });
+  }, 50);
+}
+
+/**
+ * Render canvas jadwal guru — async karena load logo.png
+ * @param {string} namaGuru - Nama lengkap guru (bukan kode)
+ */
+function _drawJadwalGuruCanvas(namaGuru) {
+  return new Promise((resolve) => {
+    const canvas = document.getElementById('jadwalGuruCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const W = 1080;
+    const H = 1920;
+    canvas.width  = W;
+    canvas.height = H;
+
+    const jadwal = getJadwalGuru(namaGuru);
+
+    // Kumpulkan semua mapel milik guru ini
+    const mapelSet = new Set();
+    if (globalGuruLookupMap) {
+      globalGuruLookupMap.forEach((info) => {
+        if ((info.nama_guru || '').trim() === namaGuru.trim() && info.mapel) {
+          mapelSet.add(info.mapel.trim());
+        }
+      });
+    }
+    const mapelStr = Array.from(mapelSet).join(' | ');
+
+    const belPeriods = globalBelData
+      ? parseBelPeriods(globalBelData)
+      : { pagi: DEFAULT_BEL_PAGI, siang: DEFAULT_BEL_SIANG };
+
+    const maxJamPagi  = belPeriods.pagi.length;
+    const maxJamSiang = belPeriods.siang.length;
+
+    // ── Layout ──
+    const PAD         = 36;
+    const LOGO_SIZE   = 100;
+    // Header cukup besar untuk: logo+judul (118px) + garis (10px) + nama guru (max 60px) + mapel (40px) + margin (30px) = ~260px
+    const HEADER_H    = 290;
+    const FOOTER_H    = 60;
+    const LABEL_COL_W = 148;
+
+    const usableW  = W - PAD * 2;
+    const usableH  = H - HEADER_H - FOOTER_H - PAD * 2;
+    const hariColW = (usableW - LABEL_COL_W) / HARI_LIST.length;
+
+    const HARI_ROW_H    = 76;
+    const SHIFT_TITLE_H = 60;
+    const JAM_ROW_H     = Math.floor(
+      (usableH - HARI_ROW_H - SHIFT_TITLE_H * 2) / (maxJamPagi + maxJamSiang)
+    );
+
+    // ── Helper: drawCell dengan textLines array of {text, color?, size?, bold?} atau string ──
+    function drawCell(x, y, w, h, bgColor, textLines, defaultColor, defaultSize, defaultBold, borderColor) {
+      ctx.save();
+      if (bgColor) { ctx.fillStyle = bgColor; ctx.fillRect(x, y, w, h); }
+      ctx.strokeStyle = borderColor || 'rgba(255,255,255,0.22)';
+      ctx.lineWidth   = 1.5;
+      ctx.strokeRect(x, y, w, h);
+
+      if (textLines && textLines.length > 0) {
+        const items = textLines.map(item =>
+          typeof item === 'string'
+            ? { text: item, color: defaultColor || '#fff', size: defaultSize || 26, bold: defaultBold || false }
+            : { color: defaultColor || '#fff', size: defaultSize || 26, bold: defaultBold || false, ...item }
+        );
+        const lineHeights = items.map(it => it.size * 1.3);
+        const totalH = lineHeights.reduce((a, b) => a + b, 0);
+        let   lineY  = y + h / 2 - totalH / 2 + lineHeights[0] / 2;
+        items.forEach((it, i) => {
+          ctx.fillStyle    = it.color;
+          ctx.font         = `${it.bold ? 'bold ' : ''}${it.size}px Arial`;
+          ctx.textAlign    = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(it.text, x + w / 2, lineY, w - 8);
+          lineY += lineHeights[i];
+        });
+      }
+      ctx.restore();
+    }
+
+    // ── Render utama (dipanggil setelah logo siap) ──
+    function doRender(logoImg) {
+      // Background gradient
+      const grad = ctx.createLinearGradient(0, 0, W, H);
+      grad.addColorStop(0,   '#0f2027');
+      grad.addColorStop(0.5, '#203a43');
+      grad.addColorStop(1,   '#2c5364');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+
+      // Watermark samar
+      ctx.save();
+      ctx.globalAlpha   = 0.03;
+      ctx.fillStyle     = '#fff';
+      ctx.font          = 'bold 400px Arial';
+      ctx.textAlign     = 'center';
+      ctx.textBaseline  = 'middle';
+      ctx.fillText('📅', W / 2, H / 2);
+      ctx.restore();
+
+      // ── HEADER ──
+      const logoX = PAD;
+      const logoY = PAD + 8;
+
+      // Logo
+      ctx.save();
+      if (logoImg) {
+        ctx.beginPath();
+        ctx.arc(logoX + LOGO_SIZE / 2, logoY + LOGO_SIZE / 2, LOGO_SIZE / 2, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(logoImg, logoX, logoY, LOGO_SIZE, LOGO_SIZE);
+      } else {
+        ctx.strokeStyle  = '#FFD700';
+        ctx.lineWidth    = 3;
+        ctx.beginPath();
+        ctx.arc(logoX + LOGO_SIZE / 2, logoY + LOGO_SIZE / 2, LOGO_SIZE / 2, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle    = '#FFD700';
+        ctx.font         = 'bold 36px Arial';
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🏫', logoX + LOGO_SIZE / 2, logoY + LOGO_SIZE / 2);
+      }
+      ctx.restore();
+
+      // Nama madrasah & tahun ajaran
+      const textX = PAD + LOGO_SIZE + 24;
+      ctx.save();
+      ctx.fillStyle    = '#FFD700';
+      ctx.font         = 'bold 44px Arial';
+      ctx.textAlign    = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText('MTs. An-Nur Bululawang', textX, PAD + 6);
+      ctx.fillStyle = '#ccc';
+      ctx.font      = '30px Arial';
+      ctx.fillText('Jadwal Pelajaran TA. 2026-2027', textX, PAD + 58);
+      ctx.restore();
+
+      // Garis pemisah header
+      const garisPemisahY = PAD + LOGO_SIZE + 18;
+      ctx.save();
+      ctx.strokeStyle = '#FFD700';
+      ctx.lineWidth   = 2;
+      ctx.beginPath();
+      ctx.moveTo(PAD, garisPemisahY);
+      ctx.lineTo(W - PAD, garisPemisahY);
+      ctx.stroke();
+      ctx.restore();
+
+      // Nama guru — font size dinamis agar muat lebar canvas
+      ctx.save();
+      let namaFontSize = 60;
+      ctx.font = `bold ${namaFontSize}px Arial`;
+      while (ctx.measureText(namaGuru).width > usableW - 20 && namaFontSize > 30) {
+        namaFontSize -= 2;
+        ctx.font = `bold ${namaFontSize}px Arial`;
+      }
+      const namaY = garisPemisahY + 18;
+      ctx.fillStyle    = '#fff';
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(namaGuru, W / 2, namaY, usableW);
+
+      // Mapel (di bawah nama guru, tidak overlap dengan tabel)
+      const mapelY = namaY + namaFontSize * 1.2;
+      ctx.fillStyle = '#00BFFF';
+      ctx.font      = '32px Arial';
+      ctx.fillText(mapelStr || '', W / 2, mapelY, usableW);
+      ctx.restore();
+
+      // ── TABEL ──
+      const tableX = PAD;
+      const tableY = HEADER_H;  // tabel mulai tepat setelah header
+      const tableW = usableW;
+
+      // Header hari
+      drawCell(tableX, tableY, LABEL_COL_W, HARI_ROW_H,
+        'rgba(0,0,80,0.7)', [
+          { text: 'Hari →', size: 22, bold: true, color: '#FFD700' },
+          { text: 'Jam ↓',  size: 22, bold: true, color: '#FFD700' }
+        ], '#FFD700', 22, true, '#FFD700');
+
+      HARI_LIST.forEach((hari, i) => {
+        const cx = tableX + LABEL_COL_W + i * hariColW;
+        drawCell(cx, tableY, hariColW, HARI_ROW_H,
+          'rgba(0,0,80,0.7)',
+          [{ text: HARI_SHORT[hari], size: 32, bold: true, color: '#FFD700' }],
+          '#FFD700', 32, true, '#FFD700');
+      });
+
+      // ─ Shift PAGI ─
+      let curY = tableY + HARI_ROW_H;
+      drawCell(tableX, curY, tableW, SHIFT_TITLE_H,
+        'rgba(0,100,160,0.85)',
+        [{ text: '🌅  SHIFT PAGI (PUTRA)', size: 30, bold: true, color: '#fff' }],
+        '#fff', 30, true, '#00BFFF');
+      curY += SHIFT_TITLE_H;
+
+      belPeriods.pagi.forEach((bel, idx) => {
+        const rowY = curY + idx * JAM_ROW_H;
+        // Kolom label jam
+        drawCell(tableX, rowY, LABEL_COL_W, JAM_ROW_H,
+          'rgba(0,50,110,0.55)', [
+            { text: `Jam ${bel.jam}`, size: 22, bold: true,  color: '#00BFFF' },
+            { text: bel.mulai,        size: 19, bold: false, color: '#aee' },
+            { text: bel.selesai,      size: 19, bold: false, color: '#aee' }
+          ], '#00BFFF', 22, false, 'rgba(255,255,255,0.15)');
+
+        HARI_LIST.forEach((hari, hi) => {
+          const cx      = tableX + LABEL_COL_W + hi * hariColW;
+          const entries = jadwal?.[hari]?.['PUTRA']?.[bel.jam] || [];
+
+          if (entries.length === 0) {
+            drawCell(cx, rowY, hariColW, JAM_ROW_H, null, [], '#fff', 24, false, 'rgba(255,255,255,0.1)');
+            return;
+          }
+
+          const tingkat = parseInt(entries[0].kelas);
+          const bgCol = tingkat === 7 ? 'rgba(0,170,170,0.65)'
+                      : tingkat === 8 ? 'rgba(0,150,70,0.65)'
+                      : tingkat === 9 ? 'rgba(190,90,0,0.65)'
+                      : 'rgba(80,80,180,0.65)';
+
+          const nEntry    = entries.length;
+          const kelasSize = nEntry > 1 ? 20 : 28;
+          const mapelSize = nEntry > 1 ? 15 : 19;
+
+          const lines = [];
+          entries.forEach(e => {
+            lines.push({ text: e.kelas, size: kelasSize, bold: true,  color: '#fff' });
+            if (e.mapel) lines.push({ text: e.mapel, size: mapelSize, bold: false, color: '#ffe' });
+          });
+
+          drawCell(cx, rowY, hariColW, JAM_ROW_H, bgCol, lines, '#fff', kelasSize, true, 'rgba(255,255,255,0.15)');
+        });
+      });
+
+      curY += maxJamPagi * JAM_ROW_H;
+
+      // ─ Shift SIANG ─
+      drawCell(tableX, curY, tableW, SHIFT_TITLE_H,
+        'rgba(100,0,120,0.85)',
+        [{ text: '🌇  SHIFT SIANG (PUTRI)', size: 30, bold: true, color: '#fff' }],
+        '#fff', 30, true, '#FF69B4');
+      curY += SHIFT_TITLE_H;
+
+      belPeriods.siang.forEach((bel, idx) => {
+        const rowY = curY + idx * JAM_ROW_H;
+        drawCell(tableX, rowY, LABEL_COL_W, JAM_ROW_H,
+          'rgba(70,0,80,0.5)', [
+            { text: `Jam ${bel.jam}`, size: 22, bold: true,  color: '#FF69B4' },
+            { text: bel.mulai,        size: 19, bold: false, color: '#fbb' },
+            { text: bel.selesai,      size: 19, bold: false, color: '#fbb' }
+          ], '#FF69B4', 22, false, 'rgba(255,255,255,0.15)');
+
+        HARI_LIST.forEach((hari, hi) => {
+          const cx      = tableX + LABEL_COL_W + hi * hariColW;
+          const entries = jadwal?.[hari]?.['PUTRI']?.[bel.jam] || [];
+
+          if (entries.length === 0) {
+            drawCell(cx, rowY, hariColW, JAM_ROW_H, null, [], '#fff', 24, false, 'rgba(255,255,255,0.1)');
+            return;
+          }
+
+          const tingkat = parseInt(entries[0].kelas);
+          const bgCol = tingkat === 7 ? 'rgba(0,170,170,0.65)'
+                      : tingkat === 8 ? 'rgba(0,150,70,0.65)'
+                      : tingkat === 9 ? 'rgba(190,90,0,0.65)'
+                      : 'rgba(80,80,180,0.65)';
+
+          const nEntry    = entries.length;
+          const kelasSize = nEntry > 1 ? 20 : 28;
+          const mapelSize = nEntry > 1 ? 15 : 19;
+
+          const lines = [];
+          entries.forEach(e => {
+            lines.push({ text: e.kelas, size: kelasSize, bold: true,  color: '#fff' });
+            if (e.mapel) lines.push({ text: e.mapel, size: mapelSize, bold: false, color: '#ffe' });
+          });
+
+          drawCell(cx, rowY, hariColW, JAM_ROW_H, bgCol, lines, '#fff', kelasSize, true, 'rgba(255,255,255,0.15)');
+        });
+      });
+
+      // ── LEGENDA WARNA ──
+      const legendY   = curY + maxJamSiang * JAM_ROW_H + 10;
+      const legColors = [
+        { color: 'rgba(0,170,170,0.8)',  label: 'Kelas 7' },
+        { color: 'rgba(0,150,70,0.8)',   label: 'Kelas 8' },
+        { color: 'rgba(190,90,0,0.8)',   label: 'Kelas 9' },
+      ];
+      const legItemW = tableW / legColors.length;
+      legColors.forEach((leg, i) => {
+        drawCell(tableX + i * legItemW, legendY, legItemW, 48, leg.color,
+          [{ text: leg.label, size: 26, bold: false, color: '#fff' }],
+          '#fff', 26, false, 'rgba(255,255,255,0.1)');
+      });
+
+      // ── FOOTER ──
+      const footerY = H - FOOTER_H;
+      ctx.save();
+      ctx.fillStyle    = 'rgba(255,255,255,0.07)';
+      ctx.fillRect(0, footerY, W, FOOTER_H);
+      ctx.fillStyle    = '#999';
+      ctx.font         = '26px Arial';
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('monitoring-kbm.netlify.app  |  MTs. An-Nur Bululawang', W / 2, footerY + FOOTER_H / 2);
+      ctx.restore();
+
+      resolve();
+    }
+
+    // Load logo.png, fallback jika gagal
+    const logoImg  = new Image();
+    logoImg.onload  = () => doRender(logoImg);
+    logoImg.onerror = () => doRender(null);
+    logoImg.src     = '/logo.png';
+  });
+}
+
+/**
+ * Download canvas sebagai file JPG
+ */
+function downloadJadwalGuruJpg() {
+  const canvas   = document.getElementById('jadwalGuruCanvas');
+  if (!canvas) return;
+  const select   = document.getElementById('guruSelect');
+  const namaGuru = select ? select.value : 'guru';
+  const namaFile = namaGuru.replace(/[^a-zA-Z0-9]/g, '_');
+
+  const link    = document.createElement('a');
+  link.download = `Jadwal_${namaFile}.jpg`;
+  link.href     = canvas.toDataURL('image/jpeg', 0.92);
+  link.click();
 }
